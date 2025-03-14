@@ -28,8 +28,6 @@ function App() {
 
     client.queries.sayHello({
       name: "Amplify",
-    }).then((response) => {
-      console.log(response);
     });
   }
 
@@ -37,7 +35,6 @@ function App() {
     <main>
       <h1>My todos</h1>
       <button onClick={createTodo}>+ new</button>
-      <button onClick={sayHello}>+ Say Hello</button>
       <ul>
         {todos.map((todo) => (
           
