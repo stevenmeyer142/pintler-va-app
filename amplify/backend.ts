@@ -2,9 +2,25 @@ import { defineBackend } from '@aws-amplify/backend';
 import { auth } from './auth/resource';
 import { data } from './data/resource';
 import { sayHello } from './functions/va_health/resource';
+import { CustomNotifications } from './custom/va-access/resource';
 
-defineBackend({
+const backend = defineBackend({
   auth,
   data,
   sayHello
+});
+
+
+
+const customNotifications = new CustomNotifications(
+  backend.createStack('CustomNotifications'),
+  'CustomNotifications',
+  { sourceAddress: 'sender@example.com' }
+);
+
+backend.addOutput({
+  custom: {
+    topicArn: customNotifications.topic.topicArn,
+    topicName: customNotifications.topic.topicName,
+  },
 });
