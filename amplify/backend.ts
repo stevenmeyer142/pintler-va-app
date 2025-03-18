@@ -15,12 +15,10 @@ const backend = defineBackend({
 const customNotifications = new CustomNotifications(
   backend.createStack('CustomNotifications'),
   'CustomNotifications',
-  { sourceAddress: 'sender@example.com' }
 );
 
 backend.addOutput({
   custom: {
-    topicArn: customNotifications.topic.topicArn,
-    topicName: customNotifications.topic.topicName,
+    gatewayURL: customNotifications.gateway_url,
   },
 });
