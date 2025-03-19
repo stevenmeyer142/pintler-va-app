@@ -1,0 +1,10 @@
+{
+   "type": "module",
+  "scripts": {
+     "build": "npm run lint && tsc",
+    "lint": "eslint . --ext .ts",
+    "amplify:CustomNotifications": "npm install && npm run build"
+
+  }
+
+ }

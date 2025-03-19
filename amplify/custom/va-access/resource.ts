@@ -1,5 +1,5 @@
 import * as url from 'node:url';
-import { Runtime } from 'aws-cdk-lib/aws-lambda';
+import { Runtime, Code } from 'aws-cdk-lib/aws-lambda';
 import * as lambda from 'aws-cdk-lib/aws-lambda-nodejs';
 import apigateway  from 'aws-cdk-lib/aws-apigateway';
 import apigwv2, { HttpMethod } from 'aws-cdk-lib/aws-apigatewayv2';
@@ -16,16 +16,18 @@ export type Message = {
 export class CustomNotifications extends Construct {
     public readonly topic: string;
     public readonly gateway_url : string;
-  constructor(scope: Construct, id: string) {
+  constructor(scope: Construct, id: string) { 
     super(scope, id);
 
     this.topic = "arn:aws:sns:us-east-1:123456789012:MyTopic";
 
     // Create Lambda to publish messages to SNS topic
     const publisher = new lambda.NodejsFunction(this, 'Publisher', {
-      entry: url.fileURLToPath(new URL('publisher.ts', import.meta.url)),
+      handler: 'lambda.handler',
+      code: Code.fromAsset('amplify/custom/va-access'), 
+      memorySize: 1024, 
 
-      runtime: Runtime.NODEJS_18_X
+      runtime: Runtime.NODEJS_LATEST
     });
 
     
@@ -35,7 +37,7 @@ const booksIntegration = new HttpLambdaIntegration('BooksIntegration', publisher
 
 const httpApi = new apigwv2.HttpApi(this, 'HttpApi');
 
-httpApi.addRoutes({
+httpApi.addRoutes({ 
   path: '/',
   integration: booksIntegration,
 });
