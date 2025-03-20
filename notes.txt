@@ -1,3 +1,4 @@
-add express layer to the lambda
+
 construct html query with authorization to call lambda
 call lambda with API gateway
+modify amplify.yml with build command for typescript.
