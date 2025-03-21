@@ -25,28 +25,11 @@ router.get("/", (req: Request, res: Response) => {
   const { event = {} } = currentInvoke;
   const { requestContext = {} } = event;
   const { domainName = "localhost:3000" } = requestContext;
-  const directoryPath = __dirname;
-  fs.readdir(directoryPath, (err, files) => {
-    if (err) {
-      return res.status(500).json({ error: `Unable to scan directory. ${directoryPath}\n${err}` });
-    }
-    return res.json({ files });
+  const apiUrl = `https://${domainName}`;
+  return res.render("index", {
+    apiUrl,
   });
-
-  // const directoryPath = path.join(__dirname, "views");
-  // fs.readdir(directoryPath, (err, files) => {
-  //   if (err) {
-  //     return res.status(500).json({ error: `Unable to scan directory. ${directoryPath}\n${err}` });
-  //   }
-  //   return res.json({ files });
-  // });
-
-  // const apiUrl = `https://${domainName}`;
-  // return res.render("index", {
-  //   apiUrl,
-  // });
-});
-
+})
 router.get("/code-genie-logo", (req: Request, res: Response) => {
   return res.sendFile(path.join(__dirname, "code-genie-logo.png"));
 });
