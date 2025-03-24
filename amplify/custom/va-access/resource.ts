@@ -24,7 +24,7 @@ export class CustomNotifications extends Construct {
     // Create Lambda to publish messages to SNS topic
     const publisher = new lambda.NodejsFunction(this, 'Publisher', {
       handler: 'lambda.handler',
-      code: Code.fromAsset('amplify/custom/va-access/dist'), 
+      code: Code.fromAsset('amplify/custom/va-access/tsc_out'), 
       memorySize: 1024,  
 
       runtime: Runtime.NODEJS_LATEST
