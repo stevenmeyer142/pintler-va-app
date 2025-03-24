@@ -3,6 +3,11 @@ OUT_DIR=tsc_out
 cd $BASEDIR
 rm -Rf $OUT_DIR
 mkdir $OUT_DIR
+if ! command -v tsc &> /dev/null
+then
+    echo "TypeScript is not installed. Installing..."
+    npm install -g typescript
+fi
 cd src
 npm ci --omit=dev
 tsc --build

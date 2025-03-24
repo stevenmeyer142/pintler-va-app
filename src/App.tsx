@@ -24,13 +24,6 @@ function App() {
     client.models.Todo.delete({ id })
   }
 
-  function sayHello() {
-
-    client.queries.sayHello({
-      name: "Amplify",
-    });
-  }
-
   return (
     <main>
       <h1>My todos</h1>
