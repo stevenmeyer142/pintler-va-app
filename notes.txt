@@ -1,2 +1,2 @@
 change dist to a non gitignore directory
-add those files to the repo.
+add those files to the repo. 

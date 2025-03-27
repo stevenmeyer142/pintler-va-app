@@ -9,6 +9,7 @@ const express_1 = __importDefault(require("express"));
 const path_1 = __importDefault(require("path"));
 const compression_1 = __importDefault(require("compression"));
 const serverless_express_1 = require("@codegenie/serverless-express");
+const backend_1 = require("@aws-amplify/backend");
 const ejs = require("ejs").__express;
 const app = (0, express_1.default)();
 exports.app = app;
@@ -19,6 +20,7 @@ router.use((0, compression_1.default)());
 router.use((0, cors_1.default)());
 router.use(express_1.default.json());
 router.use(express_1.default.urlencoded({ extended: true }));
+const client_id = (0, backend_1.secret)('foo');
 // NOTE: tests can't find the views directory without this
 app.set("views", path_1.default.join(__dirname, "views"));
 router.get("/", (req, res) => {
@@ -28,7 +30,7 @@ router.get("/", (req, res) => {
     const { domainName = "localhost:3000" } = requestContext;
     const apiUrl = `https://${domainName}`;
     return res.render("index", {
-        apiUrl,
+        apiUrl, client_id
     });
 });
 router.get("/code-genie-logo", (req, res) => {

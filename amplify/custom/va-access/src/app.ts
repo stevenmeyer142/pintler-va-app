@@ -3,6 +3,7 @@ import express, { Request, Response } from "express";
 import path from "path";
 import compression from "compression";
 import { getCurrentInvoke } from "@codegenie/serverless-express";
+import { secret } from '@aws-amplify/backend';
 
 const ejs = require("ejs").__express;
 import fs from "fs";
@@ -17,17 +18,20 @@ router.use(cors());
 router.use(express.json());
 router.use(express.urlencoded({ extended: true }));
 
+const client_id = secret('foo');
 // NOTE: tests can't find the views directory without this
 app.set("views", path.join(__dirname, "views"));
 
-router.get("/", (req: Request, res: Response) => {
+router.post("/", (req: Request, res: Response) => {
+  console.log("Request parameters:", req.params);
+  console.log("Request body:", req.body);
   const currentInvoke = getCurrentInvoke();
   const { event = {} } = currentInvoke;
   const { requestContext = {} } = event;
   const { domainName = "localhost:3000" } = requestContext;
   const apiUrl = `https://${domainName}`;
   return res.render("index", {
-    apiUrl,
+    apiUrl, client_id
   });
 })
 router.get("/code-genie-logo", (req: Request, res: Response) => {
