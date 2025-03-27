@@ -2,8 +2,25 @@
 ////import { useAuthenticator } from '@aws-amplify/ui-react';
 //import { generateClient } from "aws-amplify/data";
 import outputs from "../../amplify_outputs.json";
-import { secret } from '@aws-amplify/backend';
+//import dotenv from 'dotenv';
+import fs from 'fs';
+// import { secret } from '@aws-amplify/backend';
+// const clientId = secret('VA_Health_Client_ID');
+// const clientSecret = secret('VA_Health_Client_Secret');
 
+const envConfig = fs.readFileSync('.env', 'utf8')
+  .split('\n')
+  .filter(line => line && !line.startsWith('#'))
+  .reduce((acc, line) => {
+    const [key, value] = line.split('=');
+    acc[key.trim()] = value.trim();
+    return acc;
+  }, {} as Record<string, string>);
+
+const clientId = envConfig.CLIENT_ID || '';
+const clientSecret = envConfig.CLIENT_SECRET || '';
+
+c
 //const client = generateClient<Schema>();
 
 function App() {
@@ -28,9 +45,25 @@ function signOut() {
   // }
 
   function goToVA() {
-    const clientId = secret('VA_Health_Client_ID');
-    const clientSecret = secret('VA_Health_Client_Secret');
-    window.location.href = `${outputs.custom.gatewayURL}?client_id=${clientId}&client_secret=${clientSecret}`;
+    const requestBody = JSON.stringify({ client_id: clientId, client_secret: clientSecret });
+
+    fetch(outputs.custom.gatewayURL, {
+      method: 'POST',
+      headers: {
+      'Content-Type': 'application/json',
+      },
+      body: requestBody,
+    })
+    .then(response => response.json())
+    .then(data => {
+      console.log('Success:', data);
+      // Handle success response
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      // Handle error response
+    });
+  //  window.location.href = `${outputs.custom.gatewayURL}?client_id=${clientId}&client_secret=${clientSecret}`;
   }
 
   return (
