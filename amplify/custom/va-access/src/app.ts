@@ -3,7 +3,7 @@ import express, { Request, Response } from "express";
 import path from "path";
 import compression from "compression";
 import { getCurrentInvoke } from "@codegenie/serverless-express";
-import { secret } from '@aws-amplify/backend';
+import { env } from '$amplify/env/say-hello';
 
 const ejs = require("ejs").__express;
 import fs from "fs";
@@ -18,7 +18,7 @@ router.use(cors());
 router.use(express.json());
 router.use(express.urlencoded({ extended: true }));
 
-const client_id = secret('foo');
+const client_id = "client_id";
 // NOTE: tests can't find the views directory without this
 app.set("views", path.join(__dirname, "views"));
 

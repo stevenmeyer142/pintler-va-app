@@ -1,27 +1,22 @@
 //import { useEffect, useState } from "react";
 ////import { useAuthenticator } from '@aws-amplify/ui-react';
-//import { generateClient } from "aws-amplify/data";
+import type { Schema } from "../../amplify/data/resource"
+import { Amplify } from "aws-amplify"
+import { generateClient } from "aws-amplify/data";
 import outputs from "../../amplify_outputs.json";
 //import dotenv from 'dotenv';
-import fs from 'fs';
+//import fs from 'fs';
 // import { secret } from '@aws-amplify/backend';
 // const clientId = secret('VA_Health_Client_ID');
 // const clientSecret = secret('VA_Health_Client_Secret');
 
-const envConfig = fs.readFileSync('.env', 'utf8')
-  .split('\n')
-  .filter(line => line && !line.startsWith('#'))
-  .reduce((acc, line) => {
-    const [key, value] = line.split('=');
-    acc[key.trim()] = value.trim();
-    return acc;
-  }, {} as Record<string, string>);
+// //const clientSecret = envConfig.CLIENT_SECRET || '';
 
-const clientId = envConfig.CLIENT_ID || '';
-const clientSecret = envConfig.CLIENT_SECRET || '';
+Amplify.configure(outputs)
+const client = generateClient<Schema>();
+const clientId = "clent_id";
+const clientSecret = "client_secret";
 
-c
-//const client = generateClient<Schema>();
 
 function App() {
  // const [todos, setTodos] = useState<Array<Schema["Todo"]["type"]>>([]);
@@ -45,6 +40,10 @@ function signOut() {
   // }
 
   function goToVA() {
+    const hello = client.queries.sayHello({
+      name: "Amplify",
+    });
+    
     const requestBody = JSON.stringify({ client_id: clientId, client_secret: clientSecret });
 
     fetch(outputs.custom.gatewayURL, {
