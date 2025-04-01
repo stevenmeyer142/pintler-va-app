@@ -3,7 +3,7 @@ import express, { Request, Response } from "express";
 import path from "path";
 import compression from "compression";
 import { getCurrentInvoke } from "@codegenie/serverless-express";
-import { env } from '$amplify/env/say-hello';
+
 
 const ejs = require("ejs").__express;
 import fs from "fs";

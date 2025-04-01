@@ -9,7 +9,6 @@ const express_1 = __importDefault(require("express"));
 const path_1 = __importDefault(require("path"));
 const compression_1 = __importDefault(require("compression"));
 const serverless_express_1 = require("@codegenie/serverless-express");
-const backend_1 = require("@aws-amplify/backend");
 const ejs = require("ejs").__express;
 const app = (0, express_1.default)();
 exports.app = app;
@@ -20,10 +19,12 @@ router.use((0, compression_1.default)());
 router.use((0, cors_1.default)());
 router.use(express_1.default.json());
 router.use(express_1.default.urlencoded({ extended: true }));
-const client_id = (0, backend_1.secret)('foo');
+const client_id = "client_id";
 // NOTE: tests can't find the views directory without this
 app.set("views", path_1.default.join(__dirname, "views"));
-router.get("/", (req, res) => {
+router.post("/", (req, res) => {
+    console.log("Request parameters:", req.params);
+    console.log("Request body:", req.body);
     const currentInvoke = (0, serverless_express_1.getCurrentInvoke)();
     const { event = {} } = currentInvoke;
     const { requestContext = {} } = event;
