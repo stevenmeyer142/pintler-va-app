@@ -16,12 +16,26 @@ const router = express_1.default.Router();
 app.set("view engine", "ejs");
 app.engine(".ejs", ejs);
 router.use((0, compression_1.default)());
-router.use((0, cors_1.default)());
+router.use((0, cors_1.default)({
+    origin: "*",
+    methods: ["POST", "GET", "PUT", "DELETE", "OPTIONS"],
+}));
 router.use(express_1.default.json());
 router.use(express_1.default.urlencoded({ extended: true }));
 const client_id = "client_id";
 // NOTE: tests can't find the views directory without this
 app.set("views", path_1.default.join(__dirname, "views"));
+router.get("/", (req, res) => {
+    console.log("Request parameters:", req.params);
+    const currentInvoke = (0, serverless_express_1.getCurrentInvoke)();
+    const { event = {} } = currentInvoke;
+    const { requestContext = {} } = event;
+    const { domainName = "localhost:3000" } = requestContext;
+    const apiUrl = `https://${domainName}`;
+    return res.render("index", {
+        apiUrl, client_id
+    });
+});
 router.post("/", (req, res) => {
     console.log("Request parameters:", req.params);
     console.log("Request body:", req.body);

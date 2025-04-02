@@ -6,6 +6,7 @@ import apigwv2, { HttpMethod } from 'aws-cdk-lib/aws-apigatewayv2';
 import { Construct } from 'constructs';
 import { SelfManagedKafkaEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
+import { Duration } from 'aws-cdk-lib/core';
 
 export type Message = {
   subject: string;
@@ -22,7 +23,7 @@ export class CustomNotifications extends Construct {
     this.topic = "arn:aws:sns:us-east-1:123456789012:MyTopic";
 
     // Create Lambda to publish messages to SNS topic
-    const publisher = new lambda.NodejsFunction(this, 'VetAccess', {
+    const vetAccessLambda = new lambda.NodejsFunction(this, 'VetAccess', {
       handler: 'lambda.handler',
       code: Code.fromAsset('amplify/custom/va-access/tsc_out'),
       memorySize: 1024,
@@ -30,13 +31,24 @@ export class CustomNotifications extends Construct {
       runtime: Runtime.NODEJS_LATEST
     });
 
-    const booksIntegration = new HttpLambdaIntegration('VetAccessIntegration', publisher);
+    const vetAccessHttpLambda = new HttpLambdaIntegration('VetAccessIntegration', vetAccessLambda);
 
-    const httpApi = new apigwv2.HttpApi(this, 'HttpApi');
+    const httpApi = new apigwv2.HttpApi(this, 'VetAccessIntegration', 
+      {
+      corsPreflight: {
+        allowHeaders: ['Authorization', 'Content-Type'],
+        allowMethods: [
+           apigwv2.CorsHttpMethod.POST,
+           apigwv2.CorsHttpMethod.GET,
+        ],
+        allowOrigins: ['*'],
+        maxAge: Duration.days(10),
+      },});
 
     httpApi.addRoutes({
       path: '/',
-      integration: booksIntegration,
+      integration: vetAccessHttpLambda,
+      methods: [HttpMethod.POST, HttpMethod.GET],
     });
 
     this.gateway_url = httpApi.url?.toString() ?? '';

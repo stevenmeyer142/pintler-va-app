@@ -44,25 +44,24 @@ function signOut() {
       name: "Amplify",
     });
     
-    const requestBody = JSON.stringify({ client_id: clientId, client_secret: clientSecret });
-
     fetch(outputs.custom.gatewayURL, {
-      method: 'POST',
+      method: 'GET',
       headers: {
-      'Content-Type': 'application/json',
+      'Content-Type': 'text/html',
       },
-      body: requestBody,
     })
-    .then(response => response.json())
-    .then(data => {
-      console.log('Success:', data);
+      .then(response => response.text())
+      .then(data => {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(data, 'text/html');
+      document.body.innerHTML = doc.body.innerHTML;
       // Handle success response
-    })
-    .catch(error => {
+      })
+      .catch(error => {
       console.error('Error:', error);
       // Handle error response
-    });
-  //  window.location.href = `${outputs.custom.gatewayURL}?client_id=${clientId}&client_secret=${clientSecret}`;
+      });
+      // window.location.href = outputs.custom.gatewayURL;
   }
 
   return (
