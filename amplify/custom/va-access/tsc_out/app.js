@@ -1,107 +1,324 @@
 "use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.app = void 0;
-const cors_1 = __importDefault(require("cors"));
+require('dotenv').config();
+const axios_1 = __importDefault(require("axios"));
 const express_1 = __importDefault(require("express"));
-const path_1 = __importDefault(require("path"));
-const compression_1 = __importDefault(require("compression"));
-const serverless_express_1 = require("@codegenie/serverless-express");
-const ejs = require("ejs").__express;
+class User {
+}
+;
+const express_session_1 = __importDefault(require("express-session"));
+const passport_1 = __importDefault(require("passport"));
+const passport_oauth2_1 = __importDefault(require("passport-oauth2"));
+const https_1 = __importDefault(require("https"));
+//import sqlite3 from 'sqlite3';
+const body_parser_1 = __importDefault(require("body-parser"));
+const fs_1 = __importDefault(require("fs"));
+const env = "sandbox"; // or "production"
+const client_id = "0oa12rh7giabONafu2p8"; // process.env.CLIENT_ID;
+const client_secret = "undefined"; // process.env.CLIENT_SECRET;
+const version = 'v1';
+const redirect_uri = 'http://localhost:8081/auth/cb';
+const authenticationURL = `https://${env}-api.va.gov/oauth2/health/${version}/authorization`;
+const requestTokenURL = `https://${env}-api.va.gov/oauth2/health/${version}/token`;
+const nonce = "14343103be036d10b974c40b6eb7c6553f0b91c0f766f1e3f7358d76c377bb8d";
+//const scope="profile openid offline_access claim.read claim.write";
+const scope = "profile openid offline_access launch/patient patient/AllergyIntolerance.read patient/Appointment.read patient/Binary.read patient/Condition.read patient/Device.read patient/DeviceRequest.read patient/DiagnosticReport.read patient/DocumentReference.read patient/Encounter.read patient/Immunization.read patient/Location.read patient/Medication.read patient/MedicationOrder.read patient/MedicationRequest.read patient/MedicationStatement.read patient/Observation.read patient/Organization.read patient/Patient.read patient/Practitioner.read patient/PractitionerRole.read patient/Procedure.read";
+const patient_icn = "5000335";
+class Row {
+}
+const configurePassport = () => {
+    console.log('configurePassport');
+    passport_1.default.serializeUser((user, done) => {
+        console.log('serializeUser', user);
+        done(null, user);
+    });
+    passport_1.default.deserializeUser((user, done) => {
+        console.log('deserializeUser', user);
+        done(null, user);
+    });
+    console.log('OAuth2Strategy clientID', client_id);
+    passport_1.default.use("oauth2", new passport_oauth2_1.default({
+        authorizationURL: authenticationURL,
+        tokenURL: requestTokenURL,
+        clientID: client_id,
+        clientSecret: client_secret,
+        scope: scope,
+        state: true,
+        callbackURL: redirect_uri
+    }, function (accessToken, refreshToken, profile, cb) {
+        cb(null, { accessToken, refreshToken, profile });
+    }));
+};
+const userDetails = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    if (req.session && req.session.user) {
+        res.send(req.session.user);
+        next();
+    }
+    else {
+        res.redirect('/auth'); // Redirect the user to login if they are not
+        next();
+    }
+});
+const verifyVeteranStatus = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    if (req.session && req.session.user) {
+        const access_token = req.session.user.accessToken;
+        const has_token = access_token !== undefined;
+        const veteranStatus = yield new Promise((resolve, reject) => {
+            https_1.default.get(`https://${env}-api.va.gov/services/veteran_verification/v2/status`, { headers: { 'Authorization': `Bearer ${access_token}` } }, (res) => {
+                let rawData = '';
+                if (res.statusCode !== 200) {
+                    reject(new Error('Request Failed'));
+                }
+                res.setEncoding('utf-8');
+                res.on('data', (chunk) => { rawData += chunk; });
+                res.on('end', () => {
+                    try {
+                        const parsedOutput = JSON.parse(rawData);
+                        resolve(parsedOutput.data.attributes.veteran_status);
+                    }
+                    catch (err) {
+                        reject(err);
+                    }
+                });
+            }).on('error', reject);
+        });
+        res.render('status', { has_token: has_token, veteranStatus: veteranStatus, user: req.session.user });
+        next();
+    }
+    else {
+        res.redirect('/auth'); // Redirect the user to login if they are not
+        next();
+    }
+});
+const wrapAuth = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    //Passport or OIDC don't seem to set 'err' if our Auth Server sets them in the URL as params so we need to do this to catch that instead of relying on callback
+    if (req.query.error) {
+        return next(req.query.error_description);
+    }
+    //console.log('wrapAuth response ', req.query);
+    const code = req.query.code;
+    passport_1.default.authenticate('oauth2', function (err, user) {
+        if (err) {
+            return next(err);
+        }
+        if (!user) {
+            return res.redirect('/auth');
+        }
+        req.session.user = user;
+        res.redirect('/home');
+    })(req, res, next);
+});
+const loggedIn = (req) => {
+    return req.session && req.session.user;
+};
 const app = (0, express_1.default)();
 exports.app = app;
-const router = express_1.default.Router();
-app.set("view engine", "ejs");
-app.engine(".ejs", ejs);
-router.use((0, compression_1.default)());
-router.use((0, cors_1.default)({
-    origin: "*",
-    methods: ["POST", "GET", "PUT", "DELETE", "OPTIONS"],
-}));
-router.use(express_1.default.json());
-router.use(express_1.default.urlencoded({ extended: true }));
-const client_id = "client_id";
-// NOTE: tests can't find the views directory without this
-app.set("views", path_1.default.join(__dirname, "views"));
-router.get("/", (req, res) => {
-    console.log("Request parameters:", req.params);
-    const currentInvoke = (0, serverless_express_1.getCurrentInvoke)();
-    const { event = {} } = currentInvoke;
-    const { requestContext = {} } = event;
-    const { domainName = "localhost:3000" } = requestContext;
-    const apiUrl = `https://${domainName}`;
-    return res.render("index", {
-        apiUrl, client_id
+const startApp = () => {
+    //  const port = 8081;
+    const secret = 'My Super Secret Secret';
+    // let db = new sqlite3.Database('./db/lighthouse.sqlite', (err) => {
+    //   if (err) {
+    //     return console.error(err.message);
+    //   }
+    //   console.log('Connected to SQlite database.');
+    // });
+    app.set('view engine', 'ejs');
+    app.use(require('express-session')({ secret: 'keyboard cat', resave: true, saveUninitialized: true }));
+    app.use(passport_1.default.initialize());
+    app.use(passport_1.default.session());
+    app.use((0, express_session_1.default)({ secret, cookie: { maxAge: 60000 }, resave: true, saveUninitialized: true }));
+    app.use(body_parser_1.default.json()); // support json encoded bodies
+    app.use(body_parser_1.default.urlencoded({ extended: true }));
+    app.post('/', (req, res) => {
+        var _a;
+        const has_token = ((_a = req.session.user) === null || _a === void 0 ? void 0 : _a.accessToken) !== undefined;
+        const url = `https://${env}-api.va.gov/oauth2/claims/${version}/authorization?client_id=${client_id}&nonce=${nonce}&redirect_uri=${redirect_uri}&response_type=code&scope=${scope}&state=1589217940`;
+        //console.log("\nAuthorization url ", url, "\n");
+        if (req.session && req.session.user) {
+            res.render('index', { has_token: has_token, autherizeLink: url });
+        }
+        else {
+            res.render('index', { has_token: has_token, autherizeLink: url });
+        }
     });
-});
-router.post("/", (req, res) => {
-    console.log("Request parameters:", req.params);
-    console.log("Request body:", req.body);
-    const currentInvoke = (0, serverless_express_1.getCurrentInvoke)();
-    const { event = {} } = currentInvoke;
-    const { requestContext = {} } = event;
-    const { domainName = "localhost:3000" } = requestContext;
-    const apiUrl = `https://${domainName}`;
-    return res.render("index", {
-        apiUrl, client_id
+    app.get('/', (req, res) => {
+        var _a;
+        const has_token = ((_a = req.session.user) === null || _a === void 0 ? void 0 : _a.accessToken) !== undefined;
+        const url = `https://${env}-api.va.gov/oauth2/claims/${version}/authorization?client_id=${client_id}&nonce=${nonce}&redirect_uri=${redirect_uri}&response_type=code&scope=${scope}&state=1589217940`;
+        //console.log("\nAuthorization url ", url, "\n");
+        if (req.session && req.session.user) {
+            res.render('index', { has_token: has_token, autherizeLink: url });
+        }
+        else {
+            res.render('index', { has_token: has_token, autherizeLink: url });
+        }
     });
-});
-router.get("/code-genie-logo", (req, res) => {
-    return res.sendFile(path_1.default.join(__dirname, "code-genie-logo.png"));
-});
-router.get("/users", (req, res) => {
-    return res.json(users);
-});
-router.get("/users/:userId", (req, res) => {
-    const user = getUser(req.params.userId);
-    if (!user)
-        return res.status(404).json({});
-    return res.json(user);
-});
-router.post("/users", (req, res) => {
-    const user = {
-        id: ++userIdCounter,
-        name: req.body.name,
-    };
-    users.push(user);
-    return res.status(201).json(user);
-});
-router.put("/users/:userId", (req, res) => {
-    const user = getUser(req.params.userId);
-    if (!user)
-        return res.status(404).json({});
-    user.name = req.body.name;
-    return res.json(user);
-});
-router.delete("/users/:userId", (req, res) => {
-    const userIndex = getUserIndex(req.params.userId);
-    if (userIndex === -1)
-        return res.status(404).json({});
-    users.splice(userIndex, 1);
-    return res.json(users);
-});
-router.get("/cookie", (req, res) => {
-    res.cookie("Foo", "bar");
-    res.cookie("Fizz", "buzz");
-    return res.json({});
-});
-const getUser = (userId) => users.find((u) => u.id === parseInt(userId));
-const getUserIndex = (userId) => users.findIndex((u) => u.id === parseInt(userId));
-// Ephemeral in-memory data store
-const users = [
-    {
-        id: 1,
-        name: "Joe",
-    },
-    {
-        id: 2,
-        name: "Jane",
-    },
-];
-let userIdCounter = users.length;
-// The serverless-express library creates a server and listens on a Unix
-// Domain Socket for you, so you can remove the usual call to app.listen.
-// app.listen(3000)
-app.use("/", router);
+    app.get('/status', verifyVeteranStatus);
+    app.get('/userdetails', userDetails);
+    app.get('/coming_soon', (req, res) => {
+        res.render('coming_soon', { has_token: {}, });
+    });
+    app.get('/home', (req, res) => {
+        var _a;
+        console.log('home req.session.user', req.session.user);
+        if (req.session && req.session.user) {
+            const users = [];
+            const sql = `SELECT id, first_name, last_name, social_security_number, birth_date FROM veterans`;
+            const has_token = ((_a = req.session.user) === null || _a === void 0 ? void 0 : _a.accessToken) !== undefined;
+            // db.all(sql, [], (err:NodeJS.ErrnoException, rows:[Row]) => {
+            //   if (err) {
+            //     throw err;
+            //   }
+            //   rows.forEach((row) => {
+            //     users.push(row)
+            //   });
+            //   res.render('home', { has_token, users });
+            // });
+        }
+        else {
+            res.redirect('/auth'); // Redirect the user to login if they are not
+        }
+    });
+    app.get('/claims', (req, res) => {
+        if (req.session && req.session.user) {
+            const access_token = req.session.user.accessToken;
+            const has_token = access_token !== undefined;
+            axios_1.default.get(`https://${env}-api.va.gov/services/claims/${version}/claims`, {
+                headers: {
+                    Authorization: `Bearer ${access_token}`
+                }
+            })
+                .then(response => {
+                res.render('claims', { claims: response.data.data, has_token: has_token });
+            })
+                .catch(error => {
+                console.log(error);
+            });
+        }
+        else {
+            res.redirect('/auth'); // Redirect the user to login if they are not
+        }
+    });
+    app.get('/patient', (req, res) => {
+        if (req.session && req.session.user) {
+            const access_token = req.session.user.accessToken;
+            const has_token = access_token !== undefined;
+            const url = `https://${env}-api.va.gov/services/fhir/v0/r4/Patient?_id=${patient_icn}`;
+            const headers = {
+                Authorization: `Bearer ${access_token}`,
+                accept: 'application/fhir+json'
+            };
+            console.log('url', url);
+            console.log('headers', headers);
+            axios_1.default.get(url, {
+                headers: headers
+            })
+                .then((response) => {
+                fs_1.default.writeFile('example.txt', JSON.stringify(response.data, null, 2), (err) => {
+                    if (err) {
+                        console.error(err);
+                    }
+                    else {
+                        console.log('File written successfully');
+                    }
+                });
+                res.redirect('/home');
+            })
+                .catch((error) => {
+                if (error.response) {
+                    // The request was made and the server responded with a status code
+                    // that falls out of the range of 2xx
+                    console.error('Request failed with response:', {
+                        status: error.response.status,
+                        headers: error.response.headers,
+                        data: error.response.data
+                    });
+                }
+                console.log(error);
+                console.log('Iam error');
+            });
+        }
+        else {
+            res.redirect('/auth'); // Redirect the user to login if they are not
+        }
+    });
+    app.get('/claims/for/:id', (req, res) => {
+        if (req.session && req.session.user) {
+            const id = req.params.id;
+            const users = [];
+            const sql = `SELECT id, first_name, last_name, social_security_number, birth_date FROM veterans where id = ?`;
+            const access_token = req.session.user.accessToken;
+            const has_token = access_token !== undefined;
+            // db.get(sql, [id], (err: Error | null, row: { first_name: string; last_name: string; social_security_number: string; birth_date: string }) => {
+            //   if (err) {
+            //     throw err;
+            //   }
+            //   const url = `https://${env}-api.va.gov/services/claims/v1/claims`;
+            //   const headers = {
+            //     Authorization: `Bearer ${access_token}`,
+            //     'X-VA-First-Name': row.first_name,
+            //     'X-VA-Last-Name': row.last_name,
+            //     'X-VA-Birth-Date': row.birth_date,
+            //     'X-VA-SSN': row.social_security_number
+            //   };
+            //   console.log('url', url);
+            //   console.log('headers', headers);
+            //   axios.get(url, {
+            //     headers: headers
+            //   })
+            //   .then(response => {
+            //     res.render('claims', { user: `${row.first_name} ${row.last_name}`, claims: response.data.data, has_token: has_token });
+            //   })
+            //   .catch(error => {
+            //     console.log(error)
+            //     console.log('Iam error')
+            //   })
+            // });
+        }
+        else {
+            res.redirect('/auth'); // Redirect the user to login if they are not
+        }
+    });
+    app.post('/users', (req, res) => {
+        const first_name = req.body.first_name;
+        const last_name = req.body.last_name;
+        const social_security_number = req.body.ssn;
+        const birth_date = req.body.birth_date;
+        console.log(first_name);
+        console.log(last_name);
+        console.log(social_security_number);
+        console.log(birth_date);
+        // db.run('INSERT INTO veterans(first_name, last_name, social_security_number, birth_date) VALUES(?, ?, ?, ?)', [first_name, last_name, social_security_number, birth_date], (err) => {
+        //   if(err) {
+        //     return console.log(err.message);
+        //   }
+        //   res.redirect('/home');
+        // })
+    });
+    app.get('/auth', passport_1.default.authenticate("oauth2"));
+    app.get('/auth/cb', wrapAuth);
+    //  app.listen(port, () => console.log(`Example app listening on port ${port}!`));
+};
+(() => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        configurePassport();
+        startApp();
+    }
+    catch (err) {
+        console.error(err);
+        process.exit(1);
+    }
+}))();

@@ -1,16 +1,36 @@
 {
-   "type": "module",
+  "name": "va-api-client-oauth-example",
+  "version": "1.0.0",
+  "description": "Example OAuth Client with VA API Platform",
+  "main": "index.js",
   "scripts": {
-   "build": "npm run lint && tsc",
-    "lint": "eslint . --ext .ts"
+    "start": "nodemon index.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/department-of-veterans-affairs/vets-api-clients.git"
+  },
+  "author": "Ed Paget",
+  "license": " CC0-1.0",
+  "bugs": {
+    "url": "https://github.com/department-of-veterans-affairs/vets-api-clients/issues"
+  },
+  "homepage": "https://github.com/department-of-veterans-affairs/vets-api-clients#readme",
   "dependencies": {
-   "express": "^4.21.2",
-   "source-map-support": "^0.5.21",
-   "@codegenie/serverless-express": "^4.3.10",
-   "cors": "^2.8.5",
-   "compression": "^1.7.4",
-   "ejs": "^3.1.6"
-   }
- 
- }
+    "axios": "^1.7.4",
+    "body-parser": "^1.20.3",
+    "dotenv": "^8.6.0",
+    "ejs": "^3.1.10",
+    "express": "^4.21.2",
+    "express-session": "^1.18.1",
+    "passport-oauth2": "^1.0.0",
+    "passport": "^0.6.0",
+    "pug": "^3.0.3",
+    "@codegenie/serverless-express": "^4.3.10",
+    "sqlite3": "^5.1.6",
+    "source-map-support": "^0.5.21"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}

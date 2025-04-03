@@ -13,5 +13,4 @@ npm ci --omit=dev
 tsc --build
 cd ..
 cp -R src/views $OUT_DIR
-cp src/*.png $OUT_DIR
 cp -R src/node_modules $OUT_DIR
