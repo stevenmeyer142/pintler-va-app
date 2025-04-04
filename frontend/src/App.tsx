@@ -14,8 +14,8 @@ import outputs from "../../amplify_outputs.json";
 
 Amplify.configure(outputs)
 const client = generateClient<Schema>();
-const clientId = "clent_id";
-const clientSecret = "client_secret";
+// const clientId = "clent_id";
+// const clientSecret = "client_secret";
 
 
 function App() {
@@ -40,28 +40,28 @@ function signOut() {
   // }
 
   function goToVA() {
-    const hello = client.queries.sayHello({
-      name: "Amplify",
-    });
+    // const hello = client.queries.sayHello({
+    //   name: "Amplify",
+    // });
     
-    fetch(outputs.custom.gatewayURL, {
-      method: 'GET',
-      headers: {
-      'Content-Type': 'text/html',
-      },
-    })
-      .then(response => response.text())
-      .then(data => {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(data, 'text/html');
-      document.body.innerHTML = doc.body.innerHTML;
-      // Handle success response
-      })
-      .catch(error => {
-      console.error('Error:', error);
-      // Handle error response
-      });
-      // window.location.href = outputs.custom.gatewayURL;
+    //fetch(outputs.custom.gatewayURL, {
+    //   method: 'GET',
+    //   headers: {
+    //   'Content-Type': 'text/html',
+    //   },
+    // })
+    //   .then(response => response.text())
+    //   .then(data => {
+    //   const parser = new DOMParser();
+    //   const doc = parser.parseFromString(data, 'text/html');
+    //   document.body.innerHTML = doc.body.innerHTML;
+    //   // Handle success response
+    //   })
+    //   .catch(error => {
+    //   console.error('Error:', error);
+    //   // Handle error response
+    //   });
+     window.location.href = outputs.custom.gatewayURL;
   }
 
   return (

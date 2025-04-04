@@ -1,6 +1,7 @@
 require('dotenv').config();
 import axios from 'axios';
 import express, { Request, Response, NextFunction } from "express";
+import 'os';
 
 class User {
   accessToken!: string;
@@ -23,36 +24,66 @@ import bodyParser from 'body-parser';
 import { log } from 'console';
 import fs from 'fs';
 
-const env = "sandbox"; // or "production"
-const client_id = "0oa12rh7giabONafu2p8"; // process.env.CLIENT_ID;
-const client_secret = "undefined"; // process.env.CLIENT_SECRET;
-const version = 'v1';
-const redirect_uri = 'http://localhost:8081/auth/cb';
-const authenticationURL = `https://${env}-api.va.gov/oauth2/health/${version}/authorization`;
-const requestTokenURL = `https://${env}-api.va.gov/oauth2/health/${version}/token`;
-const nonce = "14343103be036d10b974c40b6eb7c6553f0b91c0f766f1e3f7358d76c377bb8d";
-//const scope="profile openid offline_access claim.read claim.write";
-const scope = "profile openid offline_access launch/patient patient/AllergyIntolerance.read patient/Appointment.read patient/Binary.read patient/Condition.read patient/Device.read patient/DeviceRequest.read patient/DiagnosticReport.read patient/DocumentReference.read patient/Encounter.read patient/Immunization.read patient/Location.read patient/Medication.read patient/MedicationOrder.read patient/MedicationRequest.read patient/MedicationStatement.read patient/Observation.read patient/Organization.read patient/Patient.read patient/Practitioner.read patient/PractitionerRole.read patient/Procedure.read";
-const patient_icn = "5000335";
+class Environment {
+  env: string = "sandbox";
+  clientID: string = "";
+  clientSecret: string = "";
+  version: string = 'v1';
+  redirect_uri: string = "";
+  authorizationURL: string = "";
+  tokenURL: string = "";
+  nonce: string = "14343103be036d10b974c40b6eb7c6553f0b91c0f766f1e3f7358d76c377bb8d";
+  scope: string = "profile openid offline_access launch/patient patient/AllergyIntolerance.read patient/Appointment.read patient/Binary.read patient/Condition.read patient/Device.read patient/DeviceRequest.read patient/DiagnosticReport.read patient/DocumentReference.read patient/Encounter.read patient/Immunization.read patient/Location.read patient/Medication.read patient/MedicationOrder.read patient/MedicationRequest.read patient/MedicationStatement.read patient/Observation.read patient/Organization.read patient/Patient.read patient/Practitioner.read patient/PractitionerRole.read patient/Procedure.read";
+  gatewayURL: string = "";
+  patient_icn = "5000335";
 
-class Row { 
-  first_name!: string; 
-  last_name!: string; 
-  social_security_number!: string; 
-  birth_date!: string; 
+  constructor() {
+    this.gatewayURL = process.env.GATEWAY_URL || "";
+    this.redirect_uri = `${this.gatewayURL}auth/cb`;
+    this.authorizationURL = `https://${this.env}-api.va.gov/oauth2/health/${this.version}/authorization`;
+    this.tokenURL = `https://${this.env}-api.va.gov/oauth2/health/${this.version}/token`;
+    this.clientID = process.env.CLIENT_ID || "";
+    this.clientSecret = process.env.CLIENT_SECRET || "";
+    this.env = process.env.VA_ENV || "sandbox";
+    
+    console.log('Environment variables loaded:');
+    console.log('this.clientID:', `this.clientID: ${this.clientID} typeof ${typeof this.clientID}`);
+    console.log('this.gatewayURL:', `this.gatewayURL: ${this.gatewayURL}`);
+    console.log('process.env.TEST:', `process.env.TEST: ${process.env.TEST}`);
+  };
+};
+let environment: Environment;
+// const gatewayURL = "https://edxjyofsg3.execute-api.us-east-1.amazonaws.com/";
+// const env = "sandbox"; // or "production"
+// const patient_icn = "5000335";
+// const clientID = "0oa13njziopZHpfgA2p8"; // process.env.CLIENT_ID;
+// const clientSecret = "9geUDNUP5GtCdeVyAXI71Ryz6IAxeBrxbWOITpR2jRrKdjpgEh3He2gHXZUErDQy"; // process.env.CLIENT_SECRET;
+// const version = 'v1';
+// const redirect_uri = `${gatewayURL}auth/cb`;
+// const authorizationURL = `https://${env}-api.va.gov/oauth2/health/${version}/authorization`;
+// const tokenURL = `https://${env}-api.va.gov/oauth2/health/${version}/token`;
+// const nonce = "14343103be036d10b974c40b6eb7c6553f0b91c0f766f1e3f7358d76c377bb8d";
+// const scope = "profile openid offline_access launch/patient patient/AllergyIntolerance.read patient/Appointment.read patient/Binary.read patient/Condition.read patient/Device.read patient/DeviceRequest.read patient/DiagnosticReport.read patient/DocumentReference.read patient/Encounter.read patient/Immunization.read patient/Location.read patient/Medication.read patient/MedicationOrder.read patient/MedicationRequest.read patient/MedicationStatement.read patient/Observation.read patient/Organization.read patient/Patient.read patient/Practitioner.read patient/PractitionerRole.read patient/Procedure.read";
+
+
+class Row {
+  first_name!: string;
+  last_name!: string;
+  social_security_number!: string;
+  birth_date!: string;
 }
 
 const configurePassport = () => {
-  console.log('configurePassport');
+  //const scope="profile openid offline_access claim.read claim.write";
   passport.serializeUser((user: Express.User, done) => {
-      console.log('serializeUser', user);
-      done(null, user);
-    });
+    console.log('serializeUser', user);
+    done(null, user);
+  });
 
   passport.deserializeUser((user: Express.User, done) => {
-      console.log('deserializeUser', user);
-      done(null, user);
-    });
+    console.log('deserializeUser', user);
+    done(null, user);
+  });
 
   interface OAuth2Profile {
     [key: string]: any; // Replace with specific fields if the structure of the profile is known
@@ -64,26 +95,26 @@ const configurePassport = () => {
     profile: OAuth2Profile;
   }
 
-  console.log('OAuth2Strategy clientID', client_id);
+
   passport.use("oauth2", new OAuth2Strategy({
-    authorizationURL: authenticationURL,
-    tokenURL: requestTokenURL,
-    clientID: client_id as string,
-    clientSecret: client_secret as string,
-    scope: scope,
+    authorizationURL: environment.authorizationURL,
+    tokenURL: environment.tokenURL,
+    clientID: environment.clientID,
+    clientSecret: environment.clientSecret,
+    scope: environment.scope,
     state: true,
-    callbackURL: redirect_uri
+    callbackURL: environment.redirect_uri
 
   },
-  function(
-    accessToken: string,
-    refreshToken: string,
-    profile: OAuth2Profile,
-    cb: (error: any, user?: OAuth2CallbackParams) => void
-  ) {
-    cb(null, { accessToken, refreshToken, profile });
-  }
-));
+    function (
+      accessToken: string,
+      refreshToken: string,
+      profile: OAuth2Profile,
+      cb: (error: any, user?: OAuth2CallbackParams) => void
+    ) {
+      cb(null, { accessToken, refreshToken, profile });
+    }
+  ));
 }
 
 const userDetails = async (req: Request, res: Response, next: NextFunction) => {
@@ -91,19 +122,19 @@ const userDetails = async (req: Request, res: Response, next: NextFunction) => {
     res.send(req.session.user);
     next();
   } else {
-    res.redirect('/auth'); // Redirect the user to login if they are not
+    res.redirect(`${environment.gatewayURL}auth`); // Redirect the user to login if they are not
     next();
   }
 }
 
-const verifyVeteranStatus = async (req: Request, res: Response, next:NextFunction) => {
+const verifyVeteranStatus = async (req: Request, res: Response, next: NextFunction) => {
   if (req.session && req.session.user) {
     const access_token = req.session.user.accessToken;
     const has_token = access_token !== undefined;
     const veteranStatus = await new Promise((resolve, reject) => {
       https.get(
-        `https://${env}-api.va.gov/services/veteran_verification/v2/status`,
-        { headers: {'Authorization': `Bearer ${access_token}`} },
+        `https://${environment.env}-api.va.gov/services/veteran_verification/v2/status`,
+        { headers: { 'Authorization': `Bearer ${access_token}` } },
         (res) => {
           let rawData = '';
           if (res.statusCode !== 200) {
@@ -125,39 +156,39 @@ const verifyVeteranStatus = async (req: Request, res: Response, next:NextFunctio
     res.render('status', { has_token: has_token, veteranStatus: veteranStatus, user: req.session.user });
     next();
   } else {
-    res.redirect('/auth'); // Redirect the user to login if they are not
+    res.redirect(`${environment.gatewayURL}auth`); // Redirect the user to login if they are not
     next();
   }
 };
 
 
-const wrapAuth = async (req: Request, res: Response, next:NextFunction) => {
-  
+const wrapAuth = async (req: Request, res: Response, next: NextFunction) => {
+
   //Passport or OIDC don't seem to set 'err' if our Auth Server sets them in the URL as params so we need to do this to catch that instead of relying on callback
   if (req.query.error) {
     return next(req.query.error_description);
   }
-  
+
   //console.log('wrapAuth response ', req.query);
   const code = req.query.code;
-  
-  passport.authenticate('oauth2', function(err: Error | null, user: User) {
+
+  passport.authenticate('oauth2', function (err: Error | null, user: User) {
     if (err) { return next(err) }
-    if (!user) { return res.redirect('/auth') }
+    if (!user) { return res.redirect(`${environment.gatewayURL}auth`) }
     req.session.user = user;
-    res.redirect('/home');
+    res.redirect(`${environment.gatewayURL}home`);
   })(req, res, next);
 
 };
 
 const loggedIn = (req: Request) => {
-   return req.session && req.session.user;
+  return req.session && req.session.user;
 }
 const app = express();
 
 const startApp = () => {
 
-//  const port = 8081;
+  //  const port = 8081;
   const secret = 'My Super Secret Secret'
   // let db = new sqlite3.Database('./db/lighthouse.sqlite', (err) => {
   //   if (err) {
@@ -176,34 +207,34 @@ const startApp = () => {
 
   app.post('/', (req: Request, res) => {
     const has_token = req.session.user?.accessToken !== undefined;
-    
-    const url = `https://${env}-api.va.gov/oauth2/claims/${version}/authorization?client_id=${client_id}&nonce=${nonce}&redirect_uri=${redirect_uri}&response_type=code&scope=${scope}&state=1589217940`;
-  
+
+    const url = `https://${environment.env}-api.va.gov/oauth2/claims/${environment.version}/authorization?clientID=${environment.clientID}&nonce=${environment.nonce}&redirect_uri=${environment.redirect_uri}&response_type=code&scope=${environment.scope}&state=1589217940`;
+
     //console.log("\nAuthorization url ", url, "\n");
     if (req.session && req.session.user) {
-       res.render('index', { has_token: has_token, autherizeLink : url } )
+      res.render('index', { has_token: has_token, autherizeLink: url })
     } else {
-      res.render('index', { has_token: has_token, autherizeLink : url   } )
+      res.render('index', { has_token: has_token, autherizeLink: url })
     }
   });
 
   app.get('/', (req: Request, res) => {
     const has_token = req.session.user?.accessToken !== undefined;
-    
-    const url = `https://${env}-api.va.gov/oauth2/claims/${version}/authorization?client_id=${client_id}&nonce=${nonce}&redirect_uri=${redirect_uri}&response_type=code&scope=${scope}&state=1589217940`;
-  
+
+    const url = `https://${environment.env}-api.va.gov/oauth2/claims/${environment.version}/authorization?clientID=${environment.clientID}&nonce=${environment.nonce}&redirect_uri=${environment.redirect_uri}&response_type=code&scope=${environment.scope}&state=1589217940`;
+
     //console.log("\nAuthorization url ", url, "\n");
     if (req.session && req.session.user) {
-       res.render('index', { has_token: has_token, autherizeLink : url } )
+      res.render('index', { has_token: has_token, autherizeLink: url })
     } else {
-      res.render('index', { has_token: has_token, autherizeLink : url   } )
+      res.render('index', { has_token: has_token, autherizeLink: url })
     }
   });
 
   app.get('/status', verifyVeteranStatus);
   app.get('/userdetails', userDetails);
   app.get('/coming_soon', (req: Request, res) => {
-    res.render('coming_soon', { has_token: {},} )
+    res.render('coming_soon', { has_token: {}, })
   })
 
   app.get('/home', (req: Request, res: Response) => {
@@ -223,7 +254,7 @@ const startApp = () => {
       // });
 
     } else {
-      res.redirect('/auth'); // Redirect the user to login if they are not
+      res.redirect(`${environment.gatewayURL}auth`); // Redirect the user to login if they are not
     }
   });
 
@@ -231,19 +262,19 @@ const startApp = () => {
     if (req.session && req.session.user) {
       const access_token = req.session.user.accessToken;
       const has_token = access_token !== undefined;
-      axios.get(`https://${env}-api.va.gov/services/claims/${version}/claims`, {
+      axios.get(`https://${environment.env}-api.va.gov/services/claims/${environment.version}/claims`, {
         headers: {
           Authorization: `Bearer ${access_token}`
         }
       })
-      .then(response => {
-        res.render('claims', { claims: response.data.data, has_token: has_token });
-      })
-      .catch(error => {
-        console.log(error)
-      })
+        .then(response => {
+          res.render('claims', { claims: response.data.data, has_token: has_token });
+        })
+        .catch(error => {
+          console.log(error)
+        })
     } else {
-      res.redirect('/auth'); // Redirect the user to login if they are not
+      res.redirect(`${environment.gatewayURL}auth`); // Redirect the user to login if they are not
     }
   });
 
@@ -252,30 +283,30 @@ const startApp = () => {
       const access_token = req.session.user.accessToken;
       const has_token = access_token !== undefined;
 
-        const url =`https://${env}-api.va.gov/services/fhir/v0/r4/Patient?_id=${patient_icn}`;
-      
-        const headers = {
-          Authorization: `Bearer ${access_token}`,
-          accept : 'application/fhir+json'
+      const url = `https://${environment.env}-api.va.gov/services/fhir/v0/r4/Patient?_id=${environment.patient_icn}`;
+
+      const headers = {
+        Authorization: `Bearer ${access_token}`,
+        accept: 'application/fhir+json'
+      };
+      console.log('url', url);
+      console.log('headers', headers);
+
+      interface FhirResponse {
+        data: any; // Replace `any` with a more specific type if the structure of the FHIR response is known
+      }
+
+      interface ErrorResponse {
+        response?: {
+          status: number;
+          headers: Record<string, string>;
+          data: any; // Replace `any` with a more specific type if the structure of the error response is known
         };
-        console.log('url', url);
-        console.log('headers', headers);
+      }
 
-        interface FhirResponse {
-          data: any; // Replace `any` with a more specific type if the structure of the FHIR response is known
-        }
-
-        interface ErrorResponse {
-          response?: {
-            status: number;
-            headers: Record<string, string>;
-            data: any; // Replace `any` with a more specific type if the structure of the error response is known
-          };
-        }
-
-        axios.get<FhirResponse>(url, {
-          headers: headers
-        })
+      axios.get<FhirResponse>(url, {
+        headers: headers
+      })
         .then((response: { data: FhirResponse }) => {
           fs.writeFile('example.txt', JSON.stringify(response.data, null, 2), (err: NodeJS.ErrnoException | null) => {
             if (err) {
@@ -284,8 +315,8 @@ const startApp = () => {
               console.log('File written successfully');
             }
           });
-          
-          res.redirect('/home');
+
+          res.redirect(`${environment.gatewayURL}home`);
         })
         .catch((error: ErrorResponse) => {
           if (error.response) {
@@ -300,10 +331,10 @@ const startApp = () => {
           console.log(error);
           console.log('Iam error');
         });
-      
+
 
     } else {
-      res.redirect('/auth'); // Redirect the user to login if they are not
+      res.redirect(`${environment.gatewayURL}auth`); // Redirect the user to login if they are not
     }
   });
 
@@ -342,7 +373,7 @@ const startApp = () => {
       // });
 
     } else {
-      res.redirect('/auth'); // Redirect the user to login if they are not
+      res.redirect(`${environment.gatewayURL}auth`); // Redirect the user to login if they are not
     }
   });
 
@@ -367,11 +398,12 @@ const startApp = () => {
   app.get('/auth', passport.authenticate("oauth2"));
   app.get('/auth/cb', wrapAuth);
 
-//  app.listen(port, () => console.log(`Example app listening on port ${port}!`));
+  //  app.listen(port, () => console.log(`Example app listening on port ${port}!`));
 }
 
 (async () => {
   try {
+    environment = new Environment();
     configurePassport();
     startApp();
   } catch (err) {

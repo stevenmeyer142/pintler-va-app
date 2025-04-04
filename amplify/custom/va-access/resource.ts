@@ -7,6 +7,8 @@ import { Construct } from 'constructs';
 import { SelfManagedKafkaEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { Duration } from 'aws-cdk-lib/core';
+import { secret } from '@aws-amplify/backend';
+
 
 export type Message = {
   subject: string;
@@ -51,6 +53,22 @@ export class CustomNotifications extends Construct {
       methods: [HttpMethod.POST, HttpMethod.GET],
     });
 
+    httpApi.addRoutes({
+      path: '/auth',
+      integration: vetAccessHttpLambda,
+      methods: [HttpMethod.GET],
+    });
+    httpApi.addRoutes({
+      path: '/auth/cb',
+      integration: vetAccessHttpLambda,
+      methods: [HttpMethod.GET],
+    });
+
+    vetAccessLambda.addEnvironment('GATEWAY_URL', httpApi.url?.toString() ?? '');
+    vetAccessLambda.addEnvironment('CLIENT_ID', secret('VA_Health_Client_ID').toString()?? 'undefined');
+    vetAccessLambda.addEnvironment('CLIENT_SECRET', secret('VA_Health_Client_Secret').toString());
+    vetAccessLambda.addEnvironment('VA_ENV', secret('VA_Health_Environment').toString());
+    vetAccessLambda.addEnvironment('TEST', "TEST");
     this.gateway_url = httpApi.url?.toString() ?? '';
   }
 }
