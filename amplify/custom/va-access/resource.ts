@@ -5,6 +5,7 @@ import apigateway from 'aws-cdk-lib/aws-apigateway';
 import apigwv2, { HttpMethod } from 'aws-cdk-lib/aws-apigatewayv2';
 import { Construct } from 'constructs';
 import { SelfManagedKafkaEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { Duration } from 'aws-cdk-lib/core';
 import { secret } from '@aws-amplify/backend';
@@ -28,11 +29,21 @@ export class CustomNotifications extends Construct {
     const vetAccessLambda = new lambda.NodejsFunction(this, 'VetAccess', {
       handler: 'lambda.handler',
       code: Code.fromAsset('amplify/custom/va-access/tsc_out'),
-      memorySize: 1024,
-
+      memorySize:2048,
+      timeout: Duration.seconds(30),
       runtime: Runtime.NODEJS_LATEST
     });
+    vetAccessLambda.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['secretsmanager:GetSecretValue', 'secretsmanager:listSecrets'],
+      resources: ['*'],
+    }));
 
+    // Add permissions to list s3 buckets
+    vetAccessLambda.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['s3:ListAllMyBuckets'],
+      resources: ['*'],
+    }));
+ 
     const vetAccessHttpLambda = new HttpLambdaIntegration('VetAccessIntegration', vetAccessLambda);
 
     const httpApi = new apigwv2.HttpApi(this, 'VetAccessIntegration', 
@@ -65,10 +76,6 @@ export class CustomNotifications extends Construct {
     });
 
     vetAccessLambda.addEnvironment('GATEWAY_URL', httpApi.url?.toString() ?? '');
-    vetAccessLambda.addEnvironment('CLIENT_ID', secret('VA_Health_Client_ID').toString()?? 'undefined');
-    vetAccessLambda.addEnvironment('CLIENT_SECRET', secret('VA_Health_Client_Secret').toString());
-    vetAccessLambda.addEnvironment('VA_ENV', secret('VA_Health_Environment').toString());
-    vetAccessLambda.addEnvironment('TEST', "TEST");
-    this.gateway_url = httpApi.url?.toString() ?? '';
+     this.gateway_url = httpApi.url?.toString() ?? '';
   }
 }

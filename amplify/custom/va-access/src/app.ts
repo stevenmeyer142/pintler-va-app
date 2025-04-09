@@ -2,6 +2,12 @@ require('dotenv').config();
 import axios from 'axios';
 import express, { Request, Response, NextFunction } from "express";
 import 'os';
+import {
+  GetSecretValueCommand,
+  SecretsManagerClient,
+} from "@aws-sdk/client-secrets-manager";
+import { S3Client, ListBucketsCommand } from "@aws-sdk/client-s3";
+
 
 class User {
   accessToken!: string;
@@ -32,27 +38,74 @@ class Environment {
   redirect_uri: string = "";
   authorizationURL: string = "";
   tokenURL: string = "";
-  nonce: string = "14343103be036d10b974c40b6eb7c6553f0b91c0f766f1e3f7358d76c377bb8d";
+  nonce: string = "14343103be036d10b974c40b6eb7c6553f0b91c0f766f1e3f7358d76c377bb8d"; // TODO: dynamically set Nonce
   scope: string = "profile openid offline_access launch/patient patient/AllergyIntolerance.read patient/Appointment.read patient/Binary.read patient/Condition.read patient/Device.read patient/DeviceRequest.read patient/DiagnosticReport.read patient/DocumentReference.read patient/Encounter.read patient/Immunization.read patient/Location.read patient/Medication.read patient/MedicationOrder.read patient/MedicationRequest.read patient/MedicationStatement.read patient/Observation.read patient/Organization.read patient/Patient.read patient/Practitioner.read patient/PractitionerRole.read patient/Procedure.read";
   gatewayURL: string = "";
   patient_icn = "5000335";
 
   constructor() {
+
     this.gatewayURL = process.env.GATEWAY_URL || "";
     this.redirect_uri = `${this.gatewayURL}auth/cb`;
     this.authorizationURL = `https://${this.env}-api.va.gov/oauth2/health/${this.version}/authorization`;
     this.tokenURL = `https://${this.env}-api.va.gov/oauth2/health/${this.version}/token`;
-    this.clientID = process.env.CLIENT_ID || "";
-    this.clientSecret = process.env.CLIENT_SECRET || "";
-    this.env = process.env.VA_ENV || "sandbox";
-    
-    console.log('Environment variables loaded:');
-    console.log('this.clientID:', `this.clientID: ${this.clientID} typeof ${typeof this.clientID}`);
-    console.log('this.gatewayURL:', `this.gatewayURL: ${this.gatewayURL}`);
-    console.log('process.env.TEST:', `process.env.TEST: ${process.env.TEST}`);
+
+    this.env = "sandbox";
   };
+  async updateClientSecrets() {
+    const secretPostfix = this.gatewayURL.split('//')[1]?.split('.')[0];
+    const secretName = `dev/${secretPostfix}/va_client`;
+    try {
+      const client = new SecretsManagerClient();
+       const response = await client.send(
+        new GetSecretValueCommand({
+          SecretId: secretName,
+        })
+      );
+      if (response.SecretString) {
+         const secret = JSON.parse(response.SecretString);
+        this.clientID = secret.client_id;
+        this.clientSecret = secret.client_secret;
+
+      } else {
+        console.error(`Secret ${secretName} does not contain a string value.`);
+        return undefined;
+      }
+    } catch (error) {
+      console.error(`Failed to retrieve secret ${secretName}:`, error);
+      return undefined;
+    }
+  }
+
+  // list s3 buckets
+  async listS3Buckets() {
+    console.log('Initializing S3 client...');
+    const s3 = new S3Client({
+      logger: console, // Enable logging for S3Client
+    });
+    console.log('S3 client initialized:', s3);
+    try {
+      const command = new ListBucketsCommand({});
+      console.log('listS3Buckets command', command);
+      const response = await s3.send(command);
+      console.log('listS3Buckets response', response);
+      if (response.Buckets) {
+        console.log('S3 Buckets:');
+        response.Buckets.forEach((bucket) => {
+          console.log(`- ${bucket.Name}`);
+        });
+      }
+      else {
+        console.log('No S3 buckets found.');
+      }
+    } catch (error) {
+      console.error('Error listing S3 buckets:', error);
+    }
+  }
+  // list secrets
 };
-let environment: Environment;
+let environment: Environment = new Environment();
+
 // const gatewayURL = "https://edxjyofsg3.execute-api.us-east-1.amazonaws.com/";
 // const env = "sandbox"; // or "production"
 // const patient_icn = "5000335";
@@ -76,12 +129,12 @@ class Row {
 const configurePassport = () => {
   //const scope="profile openid offline_access claim.read claim.write";
   passport.serializeUser((user: Express.User, done) => {
-    console.log('serializeUser', user);
+ //   console.log('serializeUser', user);
     done(null, user);
   });
 
   passport.deserializeUser((user: Express.User, done) => {
-    console.log('deserializeUser', user);
+ //   console.log('deserializeUser', user);
     done(null, user);
   });
 
@@ -186,7 +239,7 @@ const loggedIn = (req: Request) => {
 }
 const app = express();
 
-const startApp = () => {
+const startApp = async () => {
 
   //  const port = 8081;
   const secret = 'My Super Secret Secret'
@@ -218,7 +271,7 @@ const startApp = () => {
     }
   });
 
-  app.get('/', (req: Request, res) => {
+  app.get('/', async (req: Request, res) => {
     const has_token = req.session.user?.accessToken !== undefined;
 
     const url = `https://${environment.env}-api.va.gov/oauth2/claims/${environment.version}/authorization?clientID=${environment.clientID}&nonce=${environment.nonce}&redirect_uri=${environment.redirect_uri}&response_type=code&scope=${environment.scope}&state=1589217940`;
@@ -238,7 +291,7 @@ const startApp = () => {
   })
 
   app.get('/home', (req: Request, res: Response) => {
-    console.log('home req.session.user', req.session.user);
+  //  console.log('home req.session.user', req.session.user);
     if (req.session && req.session.user) {
       const users: Row[] = [];
       const sql = `SELECT id, first_name, last_name, social_security_number, birth_date FROM veterans`;
@@ -271,7 +324,7 @@ const startApp = () => {
           res.render('claims', { claims: response.data.data, has_token: has_token });
         })
         .catch(error => {
-          console.log(error)
+          console.error(error)
         })
     } else {
       res.redirect(`${environment.gatewayURL}auth`); // Redirect the user to login if they are not
@@ -328,8 +381,7 @@ const startApp = () => {
               data: error.response.data
             });
           }
-          console.log(error);
-          console.log('Iam error');
+          console.error(error);
         });
 
 
@@ -403,8 +455,7 @@ const startApp = () => {
 
 (async () => {
   try {
-    environment = new Environment();
-    configurePassport();
+  //  configurePassport();
     startApp();
   } catch (err) {
     console.error(err);
@@ -412,4 +463,4 @@ const startApp = () => {
   }
 })();
 
-export { app };
+export { app, environment, configurePassport };

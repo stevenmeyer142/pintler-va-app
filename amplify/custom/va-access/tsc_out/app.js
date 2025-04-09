@@ -12,11 +12,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.app = void 0;
+exports.configurePassport = exports.environment = exports.app = void 0;
 require('dotenv').config();
 const axios_1 = __importDefault(require("axios"));
 const express_1 = __importDefault(require("express"));
 require("os");
+const client_secrets_manager_1 = require("@aws-sdk/client-secrets-manager");
+const client_s3_1 = require("@aws-sdk/client-s3");
 class User {
 }
 ;
@@ -36,7 +38,7 @@ class Environment {
         this.redirect_uri = "";
         this.authorizationURL = "";
         this.tokenURL = "";
-        this.nonce = "14343103be036d10b974c40b6eb7c6553f0b91c0f766f1e3f7358d76c377bb8d";
+        this.nonce = "14343103be036d10b974c40b6eb7c6553f0b91c0f766f1e3f7358d76c377bb8d"; // TODO: dynamically set Nonce
         this.scope = "profile openid offline_access launch/patient patient/AllergyIntolerance.read patient/Appointment.read patient/Binary.read patient/Condition.read patient/Device.read patient/DeviceRequest.read patient/DiagnosticReport.read patient/DocumentReference.read patient/Encounter.read patient/Immunization.read patient/Location.read patient/Medication.read patient/MedicationOrder.read patient/MedicationRequest.read patient/MedicationStatement.read patient/Observation.read patient/Organization.read patient/Patient.read patient/Practitioner.read patient/PractitionerRole.read patient/Procedure.read";
         this.gatewayURL = "";
         this.patient_icn = "5000335";
@@ -44,18 +46,67 @@ class Environment {
         this.redirect_uri = `${this.gatewayURL}auth/cb`;
         this.authorizationURL = `https://${this.env}-api.va.gov/oauth2/health/${this.version}/authorization`;
         this.tokenURL = `https://${this.env}-api.va.gov/oauth2/health/${this.version}/token`;
-        this.clientID = process.env.CLIENT_ID || "";
-        this.clientSecret = process.env.CLIENT_SECRET || "";
-        this.env = process.env.VA_ENV || "sandbox";
-        console.log('Environment variables loaded:');
-        console.log('this.clientID:', `this.clientID: ${this.clientID} typeof ${typeof this.clientID}`);
-        console.log('this.gatewayURL:', `this.gatewayURL: ${this.gatewayURL}`);
-        console.log('process.env.TEST:', `process.env.TEST: ${process.env.TEST}`);
+        this.env = "sandbox";
     }
     ;
+    updateClientSecrets() {
+        return __awaiter(this, void 0, void 0, function* () {
+            var _a;
+            const secretPostfix = (_a = this.gatewayURL.split('//')[1]) === null || _a === void 0 ? void 0 : _a.split('.')[0];
+            const secretName = `dev/${secretPostfix}/va_client`;
+            try {
+                const client = new client_secrets_manager_1.SecretsManagerClient();
+                const response = yield client.send(new client_secrets_manager_1.GetSecretValueCommand({
+                    SecretId: secretName,
+                }));
+                if (response.SecretString) {
+                    const secret = JSON.parse(response.SecretString);
+                    this.clientID = secret.client_id;
+                    this.clientSecret = secret.client_secret;
+                }
+                else {
+                    console.error(`Secret ${secretName} does not contain a string value.`);
+                    return undefined;
+                }
+            }
+            catch (error) {
+                console.error(`Failed to retrieve secret ${secretName}:`, error);
+                return undefined;
+            }
+        });
+    }
+    // list s3 buckets
+    listS3Buckets() {
+        return __awaiter(this, void 0, void 0, function* () {
+            console.log('Initializing S3 client...');
+            const s3 = new client_s3_1.S3Client({
+                logger: console, // Enable logging for S3Client
+            });
+            console.log('S3 client initialized:', s3);
+            try {
+                const command = new client_s3_1.ListBucketsCommand({});
+                console.log('listS3Buckets command', command);
+                const response = yield s3.send(command);
+                console.log('listS3Buckets response', response);
+                if (response.Buckets) {
+                    console.log('S3 Buckets:');
+                    response.Buckets.forEach((bucket) => {
+                        console.log(`- ${bucket.Name}`);
+                    });
+                }
+                else {
+                    console.log('No S3 buckets found.');
+                }
+            }
+            catch (error) {
+                console.error('Error listing S3 buckets:', error);
+            }
+        });
+    }
 }
 ;
-let environment;
+let environment = new Environment();
+exports.environment = environment;
 // const gatewayURL = "https://edxjyofsg3.execute-api.us-east-1.amazonaws.com/";
 // const env = "sandbox"; // or "production"
 // const patient_icn = "5000335";
@@ -72,11 +123,11 @@ class Row {
 const configurePassport = () => {
     //const scope="profile openid offline_access claim.read claim.write";
     passport_1.default.serializeUser((user, done) => {
-        console.log('serializeUser', user);
+        //   console.log('serializeUser', user);
         done(null, user);
     });
     passport_1.default.deserializeUser((user, done) => {
-        console.log('deserializeUser', user);
+        //   console.log('deserializeUser', user);
         done(null, user);
     });
     passport_1.default.use("oauth2", new passport_oauth2_1.default({
@@ -91,6 +142,7 @@ const configurePassport = () => {
         cb(null, { accessToken, refreshToken, profile });
     }));
 };
+exports.configurePassport = configurePassport;
 const userDetails = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     if (req.session && req.session.user) {
         res.send(req.session.user);
@@ -155,7 +207,7 @@ const loggedIn = (req) => {
 };
 const app = (0, express_1.default)();
 exports.app = app;
-const startApp = () => {
+const startApp = () => __awaiter(void 0, void 0, void 0, function* () {
     //  const port = 8081;
     const secret = 'My Super Secret Secret';
     // let db = new sqlite3.Database('./db/lighthouse.sqlite', (err) => {
@@ -183,7 +235,7 @@ const startApp = () => {
             res.render('index', { has_token: has_token, autherizeLink: url });
         }
     });
-    app.get('/', (req, res) => {
+    app.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         var _a;
         const has_token = ((_a = req.session.user) === null || _a === void 0 ? void 0 : _a.accessToken) !== undefined;
         const url = `https://${environment.env}-api.va.gov/oauth2/claims/${environment.version}/authorization?clientID=${environment.clientID}&nonce=${environment.nonce}&redirect_uri=${environment.redirect_uri}&response_type=code&scope=${environment.scope}&state=1589217940`;
@@ -194,7 +246,7 @@ const startApp = () => {
         else {
             res.render('index', { has_token: has_token, autherizeLink: url });
         }
-    });
+    }));
     app.get('/status', verifyVeteranStatus);
     app.get('/userdetails', userDetails);
     app.get('/coming_soon', (req, res) => {
@@ -202,7 +254,7 @@ const startApp = () => {
     });
     app.get('/home', (req, res) => {
         var _a;
-        console.log('home req.session.user', req.session.user);
+        //  console.log('home req.session.user', req.session.user);
         if (req.session && req.session.user) {
             const users = [];
             const sql = `SELECT id, first_name, last_name, social_security_number, birth_date FROM veterans`;
@@ -234,7 +286,7 @@ const startApp = () => {
                 res.render('claims', { claims: response.data.data, has_token: has_token });
             })
                 .catch(error => {
-                console.log(error);
+                console.error(error);
             });
         }
         else {
@@ -276,8 +328,7 @@ const startApp = () => {
                         data: error.response.data
                     });
                 }
-                console.log(error);
-                console.log('Iam error');
+                console.error(error);
             });
         }
         else {
@@ -340,11 +391,10 @@ const startApp = () => {
     app.get('/auth', passport_1.default.authenticate("oauth2"));
     app.get('/auth/cb', wrapAuth);
     //  app.listen(port, () => console.log(`Example app listening on port ${port}!`));
-};
+});
 (() => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        environment = new Environment();
-        configurePassport();
+        //  configurePassport();
         startApp();
     }
     catch (err) {
