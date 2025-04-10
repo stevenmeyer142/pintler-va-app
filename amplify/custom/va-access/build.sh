@@ -8,6 +8,7 @@ then
     echo "TypeScript is not installed. Installing..."
     npm install -g typescript
 fi
+npm install
 cd src
 npm ci --omit=dev
 tsc --build

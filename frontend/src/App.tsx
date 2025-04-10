@@ -1,8 +1,8 @@
 //import { useEffect, useState } from "react";
 ////import { useAuthenticator } from '@aws-amplify/ui-react';
-import type { Schema } from "../../amplify/data/resource"
-import { Amplify } from "aws-amplify"
-import { generateClient } from "aws-amplify/data";
+// import type { Schema } from "../../amplify/data/resource"
+ import { Amplify } from "aws-amplify"
+// import { generateClient } from "aws-amplify/data";
 import outputs from "../../amplify_outputs.json";
 //import dotenv from 'dotenv';
 //import fs from 'fs';
@@ -13,7 +13,7 @@ import outputs from "../../amplify_outputs.json";
 // //const clientSecret = envConfig.CLIENT_SECRET || '';
 
 Amplify.configure(outputs)
-const client = generateClient<Schema>();
+//const client = generateClient<Schema>();
 // const clientId = "clent_id";
 // const clientSecret = "client_secret";
 
