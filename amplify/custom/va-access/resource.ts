@@ -25,7 +25,7 @@ export class CustomNotifications extends Construct {
 
     this.topic = "arn:aws:sns:us-east-1:123456789012:MyTopic";
 
-    // Create Lambda to publish messages to SNS topic
+    // Create Lambda to publish messages to SNS topic.
     const vetAccessLambda = new lambda.NodejsFunction(this, 'VetAccess', {
       handler: 'lambda.handler',
       code: Code.fromAsset('amplify/custom/va-access/tsc_out'),
@@ -49,7 +49,8 @@ export class CustomNotifications extends Construct {
     const httpApi = new apigwv2.HttpApi(this, 'VetAccessIntegration', 
       {
       corsPreflight: {
-        allowHeaders: ['Authorization', 'Content-Type'],
+        allowHeaders: ['*'],
+        exposeHeaders: ['*'],
         allowMethods: [
            apigwv2.CorsHttpMethod.POST,
            apigwv2.CorsHttpMethod.GET,
@@ -74,8 +75,25 @@ export class CustomNotifications extends Construct {
       integration: vetAccessHttpLambda,
       methods: [HttpMethod.GET],
     });
+    httpApi.addRoutes({
+      path: '/home',
+      integration: vetAccessHttpLambda,
+      methods: [HttpMethod.GET],
+    });
+    httpApi.addRoutes({
+      path: '/patient',
+      integration: vetAccessHttpLambda,
+      methods: [HttpMethod.POST],
+    });
+
+    httpApi.addRoutes({
+      path: '/patient_test',
+      integration: vetAccessHttpLambda,
+      methods: [HttpMethod.GET],
+    });
 
     vetAccessLambda.addEnvironment('GATEWAY_URL', httpApi.url?.toString() ?? '');
+  //  vetAccessLambda.addEnvironment('DEBUG', "express:*");
      this.gateway_url = httpApi.url?.toString() ?? '';
   }
 }

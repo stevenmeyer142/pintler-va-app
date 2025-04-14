@@ -21,6 +21,7 @@ declare module 'express-session' {
   interface SessionData {
     user?: User;
   }
+  
 }
 import passport from 'passport';
 import OAuth2Strategy from 'passport-oauth2';
@@ -29,6 +30,8 @@ import https from 'https';
 import bodyParser from 'body-parser';
 import { log } from 'console';
 import fs from 'fs';
+
+var patient_record = "No patient record retrieved yet.";
 
 class Environment {
   env: string = "sandbox";
@@ -216,7 +219,7 @@ const verifyVeteranStatus = async (req: Request, res: Response, next: NextFuncti
 
 
 const wrapAuth = async (req: Request, res: Response, next: NextFunction) => {
-
+  console.log('wrapAuth called');
   //Passport or OIDC don't seem to set 'err' if our Auth Server sets them in the URL as params so we need to do this to catch that instead of relying on callback
   if (req.query.error) {
     return next(req.query.error_description);
@@ -257,21 +260,9 @@ const startApp = async () => {
   app.use(session({ secret, cookie: { maxAge: 60000 }, resave: true, saveUninitialized: true }));
   app.use(bodyParser.json()); // support json encoded bodies
   app.use(bodyParser.urlencoded({ extended: true }));
+  var jsonParser = bodyParser.json()
 
   app.post('/', (req: Request, res) => {
-    const has_token = req.session.user?.accessToken !== undefined;
-
-    const url = `https://${environment.env}-api.va.gov/oauth2/claims/${environment.version}/authorization?clientID=${environment.clientID}&nonce=${environment.nonce}&redirect_uri=${environment.redirect_uri}&response_type=code&scope=${environment.scope}&state=1589217940`;
-
-    //console.log("\nAuthorization url ", url, "\n");
-    if (req.session && req.session.user) {
-      res.render('index', { has_token: has_token, autherizeLink: url })
-    } else {
-      res.render('index', { has_token: has_token, autherizeLink: url })
-    }
-  });
-
-  app.get('/', async (req: Request, res) => {
     const has_token = req.session.user?.accessToken !== undefined;
 
     const url = `https://${environment.env}-api.va.gov/oauth2/claims/${environment.version}/authorization?clientID=${environment.clientID}&nonce=${environment.nonce}&redirect_uri=${environment.redirect_uri}&response_type=code&scope=${environment.scope}&state=1589217940`;
@@ -293,9 +284,7 @@ const startApp = async () => {
   app.get('/home', (req: Request, res: Response) => {
   //  console.log('home req.session.user', req.session.user);
     if (req.session && req.session.user) {
-      const users: Row[] = [];
-      const sql = `SELECT id, first_name, last_name, social_security_number, birth_date FROM veterans`;
-      const has_token = req.session.user?.accessToken !== undefined;
+       const has_token = req.session.user?.accessToken !== undefined;
       // db.all(sql, [], (err:NodeJS.ErrnoException, rows:[Row]) => {
       //   if (err) {
       //     throw err;
@@ -305,6 +294,8 @@ const startApp = async () => {
       //   });
       //   res.render('home', { has_token, users });
       // });
+
+      res.render('home', { has_token, patient_record });
 
     } else {
       res.redirect(`${environment.gatewayURL}auth`); // Redirect the user to login if they are not
@@ -331,12 +322,15 @@ const startApp = async () => {
     }
   });
 
-  app.get('/patient', (req: Request, res) => {
+ 
+  app.post('/patient', jsonParser, (req: Request, res) => {
+    console.log('Patient endpoint hit');
     if (req.session && req.session.user) {
       const access_token = req.session.user.accessToken;
       const has_token = access_token !== undefined;
+      const patient_icn = req.body.patient_icn;
 
-      const url = `https://${environment.env}-api.va.gov/services/fhir/v0/r4/Patient?_id=${environment.patient_icn}`;
+      const url = `https://${environment.env}-api.va.gov/services/fhir/v0/r4/Patient?_id=${patient_icn}`;
 
       const headers = {
         Authorization: `Bearer ${access_token}`,
@@ -361,14 +355,9 @@ const startApp = async () => {
         headers: headers
       })
         .then((response: { data: FhirResponse }) => {
-          fs.writeFile('example.txt', JSON.stringify(response.data, null, 2), (err: NodeJS.ErrnoException | null) => {
-            if (err) {
-              console.error(err);
-            } else {
-              console.log('File written successfully');
-            }
-          });
-
+          console.log('Patient response', response.data);
+          patient_record = JSON.stringify(response.data, null, 2);
+          console.log('Patient record', patient_record);
           res.redirect(`${environment.gatewayURL}home`);
         })
         .catch((error: ErrorResponse) => {
@@ -447,8 +436,25 @@ const startApp = async () => {
     // })
   });
 
-  app.get('/auth', passport.authenticate("oauth2"));
+  app.get('/auth', (req, res, next) => {
+    console.log('Auth endpoint hit');
+    passport.authenticate("oauth2")(req, res, next);
+  });
   app.get('/auth/cb', wrapAuth);
+
+
+  app.get('/', async (req: Request, res) => {
+    const has_token = req.session.user?.accessToken !== undefined;
+
+    const url = `https://${environment.env}-api.va.gov/oauth2/claims/${environment.version}/authorization?clientID=${environment.clientID}&nonce=${environment.nonce}&redirect_uri=${environment.redirect_uri}&response_type=code&scope=${environment.scope}&state=1589217940`;
+
+    //console.log("\nAuthorization url ", url, "\n");
+    if (req.session && req.session.user) {
+      res.render('index', { has_token: has_token, autherizeLink: url })
+    } else {
+      res.render('index', { has_token: has_token, autherizeLink: url })
+    }
+  });
 
   //  app.listen(port, () => console.log(`Example app listening on port ${port}!`));
 }
