@@ -29,6 +29,7 @@ const https_1 = __importDefault(require("https"));
 //import sqlite3 from 'sqlite3';
 const body_parser_1 = __importDefault(require("body-parser"));
 var patient_record = "No patient record retrieved yet.";
+var main_location = "";
 class Environment {
     constructor() {
         this.env = "sandbox";
@@ -107,17 +108,6 @@ class Environment {
 ;
 let environment = new Environment();
 exports.environment = environment;
-// const gatewayURL = "https://edxjyofsg3.execute-api.us-east-1.amazonaws.com/";
-// const env = "sandbox"; // or "production"
-// const patient_icn = "5000335";
-// const clientID = "0oa13njziopZHpfgA2p8"; // process.env.CLIENT_ID;
-// const clientSecret = "9geUDNUP5GtCdeVyAXI71Ryz6IAxeBrxbWOITpR2jRrKdjpgEh3He2gHXZUErDQy"; // process.env.CLIENT_SECRET;
-// const version = 'v1';
-// const redirect_uri = `${gatewayURL}auth/cb`;
-// const authorizationURL = `https://${env}-api.va.gov/oauth2/health/${version}/authorization`;
-// const tokenURL = `https://${env}-api.va.gov/oauth2/health/${version}/token`;
-// const nonce = "14343103be036d10b974c40b6eb7c6553f0b91c0f766f1e3f7358d76c377bb8d";
-// const scope = "profile openid offline_access launch/patient patient/AllergyIntolerance.read patient/Appointment.read patient/Binary.read patient/Condition.read patient/Device.read patient/DeviceRequest.read patient/DiagnosticReport.read patient/DocumentReference.read patient/Encounter.read patient/Immunization.read patient/Location.read patient/Medication.read patient/MedicationOrder.read patient/MedicationRequest.read patient/MedicationStatement.read patient/Observation.read patient/Organization.read patient/Patient.read patient/Practitioner.read patient/PractitionerRole.read patient/Procedure.read";
 class Row {
 }
 const configurePassport = () => {
@@ -224,7 +214,7 @@ const startApp = () => __awaiter(void 0, void 0, void 0, function* () {
     app.use((0, express_session_1.default)({ secret, cookie: { maxAge: 60000 }, resave: true, saveUninitialized: true }));
     app.use(body_parser_1.default.json()); // support json encoded bodies
     app.use(body_parser_1.default.urlencoded({ extended: true }));
-    var jsonParser = body_parser_1.default.json();
+    // app.use(cors);
     app.post('/', (req, res) => {
         var _a;
         const has_token = ((_a = req.session.user) === null || _a === void 0 ? void 0 : _a.accessToken) !== undefined;
@@ -282,7 +272,7 @@ const startApp = () => __awaiter(void 0, void 0, void 0, function* () {
             res.redirect(`${environment.gatewayURL}auth`); // Redirect the user to login if they are not
         }
     });
-    app.post('/patient', jsonParser, (req, res) => {
+    app.post('/patient', (req, res) => {
         console.log('Patient endpoint hit');
         if (req.session && req.session.user) {
             const access_token = req.session.user.accessToken;
@@ -319,6 +309,16 @@ const startApp = () => __awaiter(void 0, void 0, void 0, function* () {
         }
         else {
             res.redirect(`${environment.gatewayURL}auth`); // Redirect the user to login if they are not
+        }
+    });
+    app.put('/set_session_values', (req, res) => {
+        console.log('Patient endpoint hit');
+        if (req.body.main_location) {
+            main_location = req.body.main_location;
+            res.status(200).send({ message: "main_location updated successfully" });
+        }
+        else {
+            res.status(400).send({ error: "main_location is required in the request body" });
         }
     });
     app.get('/claims/for/:id', (req, res) => {
@@ -379,9 +379,26 @@ const startApp = () => __awaiter(void 0, void 0, void 0, function* () {
         passport_1.default.authenticate("oauth2")(req, res, next);
     });
     app.get('/auth/cb', wrapAuth);
+    app.get('/return_toapp', (req, res) => {
+        console.log('return_toapp endpoint hit main_location', main_location);
+        const patientName = req.query.patientName || "Unknown";
+        const patientID = req.query.patientID || "Unknown";
+        console.log(`Patient Name: ${patientName}, Patient ID: ${patientID}`);
+        const redirectUrl = `${main_location}/display_patient?patientName=${patientName}&patientID=${patientID}`;
+        console.log('Redirecting to:', redirectUrl);
+        // res.setHeader('Access-Control-Allow-Origin', '*');
+        // res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+        // res.setHeader('Access-Control-Allow-Methods', 'POST, GET, PATCH, DELETE, OPTIONS');
+        res.redirect(redirectUrl);
+        console.log('Redirected to:', redirectUrl);
+    });
     app.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         var _a;
         const has_token = ((_a = req.session.user) === null || _a === void 0 ? void 0 : _a.accessToken) !== undefined;
+        console.log('Headers:', req.headers);
+        const mainUrlHeader = req.headers['main-url'] || 'http://localhost:5173';
+        main_location = Array.isArray(mainUrlHeader) ? mainUrlHeader[0] : mainUrlHeader;
+        console.log('main_location', main_location);
         const url = `https://${environment.env}-api.va.gov/oauth2/claims/${environment.version}/authorization?clientID=${environment.clientID}&nonce=${environment.nonce}&redirect_uri=${environment.redirect_uri}&response_type=code&scope=${environment.scope}&state=1589217940`;
         //console.log("\nAuthorization url ", url, "\n");
         if (req.session && req.session.user) {

@@ -7,6 +7,8 @@ import {
   SecretsManagerClient,
 } from "@aws-sdk/client-secrets-manager";
 import { S3Client, ListBucketsCommand } from "@aws-sdk/client-s3";
+import cors  from 'cors';
+
 
 
 class User {
@@ -21,17 +23,17 @@ declare module 'express-session' {
   interface SessionData {
     user?: User;
   }
-  
+
 }
 import passport from 'passport';
 import OAuth2Strategy from 'passport-oauth2';
 import https from 'https';
 //import sqlite3 from 'sqlite3';
 import bodyParser from 'body-parser';
-import { log } from 'console';
-import fs from 'fs';
+
 
 var patient_record = "No patient record retrieved yet.";
+var main_location: string = "";
 
 class Environment {
   env: string = "sandbox";
@@ -60,13 +62,13 @@ class Environment {
     const secretName = `dev/${secretPostfix}/va_client`;
     try {
       const client = new SecretsManagerClient();
-       const response = await client.send(
+      const response = await client.send(
         new GetSecretValueCommand({
           SecretId: secretName,
         })
       );
       if (response.SecretString) {
-         const secret = JSON.parse(response.SecretString);
+        const secret = JSON.parse(response.SecretString);
         this.clientID = secret.client_id;
         this.clientSecret = secret.client_secret;
 
@@ -109,18 +111,6 @@ class Environment {
 };
 let environment: Environment = new Environment();
 
-// const gatewayURL = "https://edxjyofsg3.execute-api.us-east-1.amazonaws.com/";
-// const env = "sandbox"; // or "production"
-// const patient_icn = "5000335";
-// const clientID = "0oa13njziopZHpfgA2p8"; // process.env.CLIENT_ID;
-// const clientSecret = "9geUDNUP5GtCdeVyAXI71Ryz6IAxeBrxbWOITpR2jRrKdjpgEh3He2gHXZUErDQy"; // process.env.CLIENT_SECRET;
-// const version = 'v1';
-// const redirect_uri = `${gatewayURL}auth/cb`;
-// const authorizationURL = `https://${env}-api.va.gov/oauth2/health/${version}/authorization`;
-// const tokenURL = `https://${env}-api.va.gov/oauth2/health/${version}/token`;
-// const nonce = "14343103be036d10b974c40b6eb7c6553f0b91c0f766f1e3f7358d76c377bb8d";
-// const scope = "profile openid offline_access launch/patient patient/AllergyIntolerance.read patient/Appointment.read patient/Binary.read patient/Condition.read patient/Device.read patient/DeviceRequest.read patient/DiagnosticReport.read patient/DocumentReference.read patient/Encounter.read patient/Immunization.read patient/Location.read patient/Medication.read patient/MedicationOrder.read patient/MedicationRequest.read patient/MedicationStatement.read patient/Observation.read patient/Organization.read patient/Patient.read patient/Practitioner.read patient/PractitionerRole.read patient/Procedure.read";
-
 
 class Row {
   first_name!: string;
@@ -132,12 +122,12 @@ class Row {
 const configurePassport = () => {
   //const scope="profile openid offline_access claim.read claim.write";
   passport.serializeUser((user: Express.User, done) => {
- //   console.log('serializeUser', user);
+    //   console.log('serializeUser', user);
     done(null, user);
   });
 
   passport.deserializeUser((user: Express.User, done) => {
- //   console.log('deserializeUser', user);
+    //   console.log('deserializeUser', user);
     done(null, user);
   });
 
@@ -260,7 +250,8 @@ const startApp = async () => {
   app.use(session({ secret, cookie: { maxAge: 60000 }, resave: true, saveUninitialized: true }));
   app.use(bodyParser.json()); // support json encoded bodies
   app.use(bodyParser.urlencoded({ extended: true }));
-  var jsonParser = bodyParser.json()
+ 
+ // app.use(cors);
 
   app.post('/', (req: Request, res) => {
     const has_token = req.session.user?.accessToken !== undefined;
@@ -282,9 +273,9 @@ const startApp = async () => {
   })
 
   app.get('/home', (req: Request, res: Response) => {
-  //  console.log('home req.session.user', req.session.user);
+    //  console.log('home req.session.user', req.session.user);
     if (req.session && req.session.user) {
-       const has_token = req.session.user?.accessToken !== undefined;
+      const has_token = req.session.user?.accessToken !== undefined;
       // db.all(sql, [], (err:NodeJS.ErrnoException, rows:[Row]) => {
       //   if (err) {
       //     throw err;
@@ -322,8 +313,8 @@ const startApp = async () => {
     }
   });
 
- 
-  app.post('/patient', jsonParser, (req: Request, res) => {
+
+  app.post('/patient', (req: Request, res) => {
     console.log('Patient endpoint hit');
     if (req.session && req.session.user) {
       const access_token = req.session.user.accessToken;
@@ -376,6 +367,16 @@ const startApp = async () => {
 
     } else {
       res.redirect(`${environment.gatewayURL}auth`); // Redirect the user to login if they are not
+    }
+  });
+
+  app.put('/set_session_values', (req: Request, res) => {
+    console.log('Patient endpoint hit');
+    if (req.body.main_location) {
+      main_location = req.body.main_location;
+      res.status(200).send({ message: "main_location updated successfully" });
+    } else {
+      res.status(400).send({ error: "main_location is required in the request body" });
     }
   });
 
@@ -442,9 +443,23 @@ const startApp = async () => {
   });
   app.get('/auth/cb', wrapAuth);
 
+  
+  app.get('/return_toapp', (req, res) => {
+    console.log('return_toapp endpoint hit main_location', main_location);
+    const patientName = req.query.patientName || "Unknown";
+    const patientID = req.query.patientID || "Unknown";
+    console.log(`Patient Name: ${patientName}, Patient ID: ${patientID}`);
+    const redirectUrl = `${main_location}/display_patient?patientName=${patientName}&patientID=${patientID}`;
+ 
+    res.redirect(redirectUrl);
+  });
 
   app.get('/', async (req: Request, res) => {
     const has_token = req.session.user?.accessToken !== undefined;
+    console.log('Headers:', req.headers);
+    const mainUrlHeader = req.headers['main-url'] || 'http://localhost:5173';
+    main_location = Array.isArray(mainUrlHeader) ? mainUrlHeader[0] : mainUrlHeader;
+    console.log('main_location', main_location);
 
     const url = `https://${environment.env}-api.va.gov/oauth2/claims/${environment.version}/authorization?clientID=${environment.clientID}&nonce=${environment.nonce}&redirect_uri=${environment.redirect_uri}&response_type=code&scope=${environment.scope}&state=1589217940`;
 
@@ -461,7 +476,7 @@ const startApp = async () => {
 
 (async () => {
   try {
-  //  configurePassport();
+    //  configurePassport();
     startApp();
   } catch (err) {
     console.error(err);

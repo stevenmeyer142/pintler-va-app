@@ -50,14 +50,15 @@ export class CustomNotifications extends Construct {
       {
       corsPreflight: {
         allowHeaders: ['*'],
-        exposeHeaders: ['*'],
         allowMethods: [
-           apigwv2.CorsHttpMethod.POST,
+           apigwv2.CorsHttpMethod.PUT,
            apigwv2.CorsHttpMethod.GET,
+           apigwv2.CorsHttpMethod.POST,
         ],
         allowOrigins: ['*'],
         maxAge: Duration.days(10),
-      },});
+      },
+    });
 
     httpApi.addRoutes({
       path: '/',
@@ -87,13 +88,21 @@ export class CustomNotifications extends Construct {
     });
 
     httpApi.addRoutes({
-      path: '/patient_test',
+      path: '/set_session_values',
+      integration: vetAccessHttpLambda,
+      methods: [HttpMethod.PUT],
+    });
+
+    httpApi.addRoutes({
+      path: '/return_toapp',
       integration: vetAccessHttpLambda,
       methods: [HttpMethod.GET],
     });
 
+
+
     vetAccessLambda.addEnvironment('GATEWAY_URL', httpApi.url?.toString() ?? '');
-  //  vetAccessLambda.addEnvironment('DEBUG', "express:*");
+    vetAccessLambda.addEnvironment('DEBUG', "express:*");
      this.gateway_url = httpApi.url?.toString() ?? '';
   }
 }
