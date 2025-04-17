@@ -17,22 +17,49 @@ Amplify.configure(outputs)
 // const clientId = "clent_id";
 // const clientSecret = "client_secret";
 import { BrowserRouter as Router, Route, Routes, useSearchParams } from "react-router-dom";
+import {deleteBucketAndObjects} from "./aws_frontend_s3";
 
-  function createTodo() {
-  //  client.models.Todo.create({ content: window.prompt("Todo content") });
-  }
+ var patientId = "";
+ var patientBucket = "";
+ var patientObjectKey = "";
+
+ async function deleteBucket() {
+    try {
+      console.log("Deleting bucket and objects...");
+      await deleteBucketAndObjects(patientBucket);
+      console.log("Bucket deleted successfully");
+    }
+    catch (error) {
+      console.error("Error deleting bucket:", error);
+ }  
+}
+async function importToHealthLake() {
+}
+
+function debugDisplayPatient() {
+  patientId = "5000335";
+  patientBucket = "va-patient-icn-5000335-2e44550c-979f-46fb-8556-19eea220a5aa";
+  patientObjectKey = "patient_record";
+  
+  window.location.href = `/display_patient?patientId=${patientId}&patientBucket=${patientBucket}&patientObjectKey=${patientObjectKey}`;
+}
 
   function DisplayPatient() {
     const [searchParams] = useSearchParams();
-    const patientId = searchParams.get("patientId");
-    const patientName = searchParams.get("patientName");
+    patientId = searchParams.get("patientId") || "Not provided";
+    patientBucket = searchParams.get("patientBucket") || "Not provided";
+    patientObjectKey = searchParams.get("patientObjectKey")|| "Not provided";
   
     return (
       <div>
         <h1>Patient Details</h1>
-        <p><strong>Patient ID:</strong> {patientId || "Not provided"}</p>
-        <p><strong>Patient Name:</strong> {patientName || "Not provided"}</p>
-      </div>
+        <p><strong>Patient ICN:</strong> {patientId}</p>
+        <p><strong>Patient Bucket:</strong> {patientBucket}</p>
+        <p><strong>Patient Opject Key:</strong> {patientObjectKey }</p>
+        <button onClick={deleteBucket}>Delete Bucket</button>
+        </div>
+
+      
     );
   }
   
@@ -54,7 +81,7 @@ import { BrowserRouter as Router, Route, Routes, useSearchParams } from "react-r
             console.error(`HTTP error! status: ${response.status}`);
           }
           else {
-          window.location.href = outputs.custom.gatewayURL;
+          window.location.href = `${outputs.custom.gatewayURL}auth`;
         }
         })
         .catch((error) => {
@@ -77,16 +104,9 @@ function DisplayMain() {
   return (
     <main>
       <button onClick={goToVA}>Login to VA</button>
-
-      <h1>My todos</h1>
-      <button onClick={createTodo}>+ new</button>
-        <div>
-        🥳 App successfully hosted. Try creating a new todo.
-        <br />
-        <a href="https://docs.amplify.aws/react/start/quickstart/#make-frontend-updates">
-          Review next step of this tutorial.
-        </a>
-      </div>
+      <div style={{ margin: "10px 0" }}></div>
+      <button onClick={debugDisplayPatient}>Debug HealthLakeImport</button>
+      <div style={{ margin: "10px 0" }}></div>
       <button onClick={signOut}>Sign out</button>
     </main>
   );

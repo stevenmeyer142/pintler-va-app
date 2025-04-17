@@ -18,14 +18,13 @@ const axios_1 = __importDefault(require("axios"));
 const express_1 = __importDefault(require("express"));
 require("os");
 const client_secrets_manager_1 = require("@aws-sdk/client-secrets-manager");
-const client_s3_1 = require("@aws-sdk/client-s3");
+const aws_backend_s3_1 = require("./aws_backend_s3");
 class User {
 }
 ;
 const express_session_1 = __importDefault(require("express-session"));
 const passport_1 = __importDefault(require("passport"));
 const passport_oauth2_1 = __importDefault(require("passport-oauth2"));
-const https_1 = __importDefault(require("https"));
 //import sqlite3 from 'sqlite3';
 const body_parser_1 = __importDefault(require("body-parser"));
 var patient_record = "No patient record retrieved yet.";
@@ -76,34 +75,6 @@ class Environment {
             }
         });
     }
-    // list s3 buckets
-    listS3Buckets() {
-        return __awaiter(this, void 0, void 0, function* () {
-            console.log('Initializing S3 client...');
-            const s3 = new client_s3_1.S3Client({
-                logger: console, // Enable logging for S3Client
-            });
-            console.log('S3 client initialized:', s3);
-            try {
-                const command = new client_s3_1.ListBucketsCommand({});
-                console.log('listS3Buckets command', command);
-                const response = yield s3.send(command);
-                console.log('listS3Buckets response', response);
-                if (response.Buckets) {
-                    console.log('S3 Buckets:');
-                    response.Buckets.forEach((bucket) => {
-                        console.log(`- ${bucket.Name}`);
-                    });
-                }
-                else {
-                    console.log('No S3 buckets found.');
-                }
-            }
-            catch (error) {
-                console.error('Error listing S3 buckets:', error);
-            }
-        });
-    }
 }
 ;
 let environment = new Environment();
@@ -133,47 +104,6 @@ const configurePassport = () => {
     }));
 };
 exports.configurePassport = configurePassport;
-const userDetails = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    if (req.session && req.session.user) {
-        res.send(req.session.user);
-        next();
-    }
-    else {
-        res.redirect(`${environment.gatewayURL}auth`); // Redirect the user to login if they are not
-        next();
-    }
-});
-const verifyVeteranStatus = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    if (req.session && req.session.user) {
-        const access_token = req.session.user.accessToken;
-        const has_token = access_token !== undefined;
-        const veteranStatus = yield new Promise((resolve, reject) => {
-            https_1.default.get(`https://${environment.env}-api.va.gov/services/veteran_verification/v2/status`, { headers: { 'Authorization': `Bearer ${access_token}` } }, (res) => {
-                let rawData = '';
-                if (res.statusCode !== 200) {
-                    reject(new Error('Request Failed'));
-                }
-                res.setEncoding('utf-8');
-                res.on('data', (chunk) => { rawData += chunk; });
-                res.on('end', () => {
-                    try {
-                        const parsedOutput = JSON.parse(rawData);
-                        resolve(parsedOutput.data.attributes.veteran_status);
-                    }
-                    catch (err) {
-                        reject(err);
-                    }
-                });
-            }).on('error', reject);
-        });
-        res.render('status', { has_token: has_token, veteranStatus: veteranStatus, user: req.session.user });
-        next();
-    }
-    else {
-        res.redirect(`${environment.gatewayURL}auth`); // Redirect the user to login if they are not
-        next();
-    }
-});
 const wrapAuth = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     console.log('wrapAuth called');
     //Passport or OIDC don't seem to set 'err' if our Auth Server sets them in the URL as params so we need to do this to catch that instead of relying on callback
@@ -227,11 +157,6 @@ const startApp = () => __awaiter(void 0, void 0, void 0, function* () {
             res.render('index', { has_token: has_token, autherizeLink: url });
         }
     });
-    app.get('/status', verifyVeteranStatus);
-    app.get('/userdetails', userDetails);
-    app.get('/coming_soon', (req, res) => {
-        res.render('coming_soon', { has_token: {}, });
-    });
     app.get('/home', (req, res) => {
         var _a;
         //  console.log('home req.session.user', req.session.user);
@@ -247,26 +172,6 @@ const startApp = () => __awaiter(void 0, void 0, void 0, function* () {
             //   res.render('home', { has_token, users });
             // });
             res.render('home', { has_token, patient_record });
-        }
-        else {
-            res.redirect(`${environment.gatewayURL}auth`); // Redirect the user to login if they are not
-        }
-    });
-    app.get('/claims', (req, res) => {
-        if (req.session && req.session.user) {
-            const access_token = req.session.user.accessToken;
-            const has_token = access_token !== undefined;
-            axios_1.default.get(`https://${environment.env}-api.va.gov/services/claims/${environment.version}/claims`, {
-                headers: {
-                    Authorization: `Bearer ${access_token}`
-                }
-            })
-                .then(response => {
-                res.render('claims', { claims: response.data.data, has_token: has_token });
-            })
-                .catch(error => {
-                console.error(error);
-            });
         }
         else {
             res.redirect(`${environment.gatewayURL}auth`); // Redirect the user to login if they are not
@@ -288,12 +193,22 @@ const startApp = () => __awaiter(void 0, void 0, void 0, function* () {
             axios_1.default.get(url, {
                 headers: headers
             })
-                .then((response) => {
+                .then((response) => __awaiter(void 0, void 0, void 0, function* () {
                 console.log('Patient response', response.data);
                 patient_record = JSON.stringify(response.data, null, 2);
-                console.log('Patient record', patient_record);
-                res.redirect(`${environment.gatewayURL}home`);
-            })
+                try {
+                    const opjectKey = 'patient_record';
+                    const bucketName = yield (0, aws_backend_s3_1.createBucketAndUploadFile)(patient_icn, opjectKey, patient_record);
+                    console.log('Created bucket', bucketName);
+                    const redirectUrl = `${main_location}display_patient?patientID=${patient_icn}&patientBucket=${bucketName}&patientObjectKey=${opjectKey}`;
+                    res.redirect(redirectUrl);
+                }
+                catch (error) {
+                    console.error("Error creating bucket:", error);
+                    patient_record = `Error creating bucket:\n${error}`;
+                    res.redirect(`${environment.gatewayURL}home`);
+                }
+            }))
                 .catch((error) => {
                 if (error.response) {
                     // The request was made and the server responded with a status code
@@ -321,59 +236,6 @@ const startApp = () => __awaiter(void 0, void 0, void 0, function* () {
             res.status(400).send({ error: "main_location is required in the request body" });
         }
     });
-    app.get('/claims/for/:id', (req, res) => {
-        if (req.session && req.session.user) {
-            const id = req.params.id;
-            const users = [];
-            const sql = `SELECT id, first_name, last_name, social_security_number, birth_date FROM veterans where id = ?`;
-            const access_token = req.session.user.accessToken;
-            const has_token = access_token !== undefined;
-            // db.get(sql, [id], (err: Error | null, row: { first_name: string; last_name: string; social_security_number: string; birth_date: string }) => {
-            //   if (err) {
-            //     throw err;
-            //   }
-            //   const url = `https://${env}-api.va.gov/services/claims/v1/claims`;
-            //   const headers = {
-            //     Authorization: `Bearer ${access_token}`,
-            //     'X-VA-First-Name': row.first_name,
-            //     'X-VA-Last-Name': row.last_name,
-            //     'X-VA-Birth-Date': row.birth_date,
-            //     'X-VA-SSN': row.social_security_number
-            //   };
-            //   console.log('url', url);
-            //   console.log('headers', headers);
-            //   axios.get(url, {
-            //     headers: headers
-            //   })
-            //   .then(response => {
-            //     res.render('claims', { user: `${row.first_name} ${row.last_name}`, claims: response.data.data, has_token: has_token });
-            //   })
-            //   .catch(error => {
-            //     console.log(error)
-            //     console.log('Iam error')
-            //   })
-            // });
-        }
-        else {
-            res.redirect(`${environment.gatewayURL}auth`); // Redirect the user to login if they are not
-        }
-    });
-    app.post('/users', (req, res) => {
-        const first_name = req.body.first_name;
-        const last_name = req.body.last_name;
-        const social_security_number = req.body.ssn;
-        const birth_date = req.body.birth_date;
-        console.log(first_name);
-        console.log(last_name);
-        console.log(social_security_number);
-        console.log(birth_date);
-        // db.run('INSERT INTO veterans(first_name, last_name, social_security_number, birth_date) VALUES(?, ?, ?, ?)', [first_name, last_name, social_security_number, birth_date], (err) => {
-        //   if(err) {
-        //     return console.log(err.message);
-        //   }
-        //   res.redirect('/home');
-        // })
-    });
     app.get('/auth', (req, res, next) => {
         console.log('Auth endpoint hit');
         passport_1.default.authenticate("oauth2")(req, res, next);
@@ -385,20 +247,12 @@ const startApp = () => __awaiter(void 0, void 0, void 0, function* () {
         const patientID = req.query.patientID || "Unknown";
         console.log(`Patient Name: ${patientName}, Patient ID: ${patientID}`);
         const redirectUrl = `${main_location}/display_patient?patientName=${patientName}&patientID=${patientID}`;
-        console.log('Redirecting to:', redirectUrl);
-        // res.setHeader('Access-Control-Allow-Origin', '*');
-        // res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-        // res.setHeader('Access-Control-Allow-Methods', 'POST, GET, PATCH, DELETE, OPTIONS');
         res.redirect(redirectUrl);
-        console.log('Redirected to:', redirectUrl);
     });
     app.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         var _a;
         const has_token = ((_a = req.session.user) === null || _a === void 0 ? void 0 : _a.accessToken) !== undefined;
-        console.log('Headers:', req.headers);
-        const mainUrlHeader = req.headers['main-url'] || 'http://localhost:5173';
-        main_location = Array.isArray(mainUrlHeader) ? mainUrlHeader[0] : mainUrlHeader;
-        console.log('main_location', main_location);
+        // TODO: is the autherization link correct?
         const url = `https://${environment.env}-api.va.gov/oauth2/claims/${environment.version}/authorization?clientID=${environment.clientID}&nonce=${environment.nonce}&redirect_uri=${environment.redirect_uri}&response_type=code&scope=${environment.scope}&state=1589217940`;
         //console.log("\nAuthorization url ", url, "\n");
         if (req.session && req.session.user) {
@@ -412,7 +266,6 @@ const startApp = () => __awaiter(void 0, void 0, void 0, function* () {
 });
 (() => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        //  configurePassport();
         startApp();
     }
     catch (err) {

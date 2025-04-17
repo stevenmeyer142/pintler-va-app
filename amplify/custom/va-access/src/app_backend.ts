@@ -6,10 +6,8 @@ import {
   GetSecretValueCommand,
   SecretsManagerClient,
 } from "@aws-sdk/client-secrets-manager";
-import { S3Client, ListBucketsCommand } from "@aws-sdk/client-s3";
-import cors  from 'cors';
 
-
+import { createBucketAndUploadFile } from './aws_backend_s3';
 
 class User {
   accessToken!: string;
@@ -82,32 +80,6 @@ class Environment {
     }
   }
 
-  // list s3 buckets
-  async listS3Buckets() {
-    console.log('Initializing S3 client...');
-    const s3 = new S3Client({
-      logger: console, // Enable logging for S3Client
-    });
-    console.log('S3 client initialized:', s3);
-    try {
-      const command = new ListBucketsCommand({});
-      console.log('listS3Buckets command', command);
-      const response = await s3.send(command);
-      console.log('listS3Buckets response', response);
-      if (response.Buckets) {
-        console.log('S3 Buckets:');
-        response.Buckets.forEach((bucket) => {
-          console.log(`- ${bucket.Name}`);
-        });
-      }
-      else {
-        console.log('No S3 buckets found.');
-      }
-    } catch (error) {
-      console.error('Error listing S3 buckets:', error);
-    }
-  }
-  // list secrets
 };
 let environment: Environment = new Environment();
 
@@ -162,50 +134,6 @@ const configurePassport = () => {
     }
   ));
 }
-
-const userDetails = async (req: Request, res: Response, next: NextFunction) => {
-  if (req.session && req.session.user) {
-    res.send(req.session.user);
-    next();
-  } else {
-    res.redirect(`${environment.gatewayURL}auth`); // Redirect the user to login if they are not
-    next();
-  }
-}
-
-const verifyVeteranStatus = async (req: Request, res: Response, next: NextFunction) => {
-  if (req.session && req.session.user) {
-    const access_token = req.session.user.accessToken;
-    const has_token = access_token !== undefined;
-    const veteranStatus = await new Promise((resolve, reject) => {
-      https.get(
-        `https://${environment.env}-api.va.gov/services/veteran_verification/v2/status`,
-        { headers: { 'Authorization': `Bearer ${access_token}` } },
-        (res) => {
-          let rawData = '';
-          if (res.statusCode !== 200) {
-            reject(new Error('Request Failed'));
-          }
-          res.setEncoding('utf-8');
-          res.on('data', (chunk) => { rawData += chunk; });
-          res.on('end', () => {
-            try {
-              const parsedOutput = JSON.parse(rawData);
-              resolve(parsedOutput.data.attributes.veteran_status);
-            } catch (err) {
-              reject(err);
-            }
-          });
-        }
-      ).on('error', reject);
-    });
-    res.render('status', { has_token: has_token, veteranStatus: veteranStatus, user: req.session.user });
-    next();
-  } else {
-    res.redirect(`${environment.gatewayURL}auth`); // Redirect the user to login if they are not
-    next();
-  }
-};
 
 
 const wrapAuth = async (req: Request, res: Response, next: NextFunction) => {
@@ -266,12 +194,7 @@ const startApp = async () => {
     }
   });
 
-  app.get('/status', verifyVeteranStatus);
-  app.get('/userdetails', userDetails);
-  app.get('/coming_soon', (req: Request, res) => {
-    res.render('coming_soon', { has_token: {}, })
-  })
-
+  
   app.get('/home', (req: Request, res: Response) => {
     //  console.log('home req.session.user', req.session.user);
     if (req.session && req.session.user) {
@@ -293,28 +216,7 @@ const startApp = async () => {
     }
   });
 
-  app.get('/claims', (req: Request, res) => {
-    if (req.session && req.session.user) {
-      const access_token = req.session.user.accessToken;
-      const has_token = access_token !== undefined;
-      axios.get(`https://${environment.env}-api.va.gov/services/claims/${environment.version}/claims`, {
-        headers: {
-          Authorization: `Bearer ${access_token}`
-        }
-      })
-        .then(response => {
-          res.render('claims', { claims: response.data.data, has_token: has_token });
-        })
-        .catch(error => {
-          console.error(error)
-        })
-    } else {
-      res.redirect(`${environment.gatewayURL}auth`); // Redirect the user to login if they are not
-    }
-  });
-
-
-  app.post('/patient', (req: Request, res) => {
+   app.post('/patient', (req: Request, res) => {
     console.log('Patient endpoint hit');
     if (req.session && req.session.user) {
       const access_token = req.session.user.accessToken;
@@ -345,11 +247,24 @@ const startApp = async () => {
       axios.get<FhirResponse>(url, {
         headers: headers
       })
-        .then((response: { data: FhirResponse }) => {
+        .then(async (response: { data: FhirResponse }) => {
           console.log('Patient response', response.data);
           patient_record = JSON.stringify(response.data, null, 2);
-          console.log('Patient record', patient_record);
-          res.redirect(`${environment.gatewayURL}home`);
+          
+          try {
+            const opjectKey = 'patient_record';
+          const bucketName = await createBucketAndUploadFile(patient_icn, opjectKey, patient_record);
+          
+          console.log('Created bucket', bucketName);
+          const redirectUrl = `${main_location}display_patient?patientId=${patient_icn}&patientBucket=${bucketName}&patientObjectKey=${opjectKey}`;
+ 
+          res.redirect(redirectUrl);
+          }
+          catch (error) {
+            console.error("Error creating bucket:", error);
+            patient_record = `Error creating bucket:\n${error}`;
+            res.redirect(`${environment.gatewayURL}home`);
+          }
         })
         .catch((error: ErrorResponse) => {
           if (error.response) {
@@ -380,63 +295,6 @@ const startApp = async () => {
     }
   });
 
-  app.get('/claims/for/:id', (req: Request, res) => {
-    if (req.session && req.session.user) {
-      const id = req.params.id;
-      const users = [];
-      const sql = `SELECT id, first_name, last_name, social_security_number, birth_date FROM veterans where id = ?`;
-      const access_token = req.session.user.accessToken;
-      const has_token = access_token !== undefined;
-      // db.get(sql, [id], (err: Error | null, row: { first_name: string; last_name: string; social_security_number: string; birth_date: string }) => {
-      //   if (err) {
-      //     throw err;
-      //   }
-      //   const url = `https://${env}-api.va.gov/services/claims/v1/claims`;
-      //   const headers = {
-      //     Authorization: `Bearer ${access_token}`,
-      //     'X-VA-First-Name': row.first_name,
-      //     'X-VA-Last-Name': row.last_name,
-      //     'X-VA-Birth-Date': row.birth_date,
-      //     'X-VA-SSN': row.social_security_number
-      //   };
-      //   console.log('url', url);
-      //   console.log('headers', headers);
-
-      //   axios.get(url, {
-      //     headers: headers
-      //   })
-      //   .then(response => {
-      //     res.render('claims', { user: `${row.first_name} ${row.last_name}`, claims: response.data.data, has_token: has_token });
-      //   })
-      //   .catch(error => {
-      //     console.log(error)
-      //     console.log('Iam error')
-      //   })
-      // });
-
-    } else {
-      res.redirect(`${environment.gatewayURL}auth`); // Redirect the user to login if they are not
-    }
-  });
-
-  app.post('/users', (req: Request, res) => {
-    const first_name = req.body.first_name;
-    const last_name = req.body.last_name;
-    const social_security_number = req.body.ssn;
-    const birth_date = req.body.birth_date;
-    console.log(first_name);
-    console.log(last_name);
-    console.log(social_security_number);
-    console.log(birth_date);
-    // db.run('INSERT INTO veterans(first_name, last_name, social_security_number, birth_date) VALUES(?, ?, ?, ?)', [first_name, last_name, social_security_number, birth_date], (err) => {
-    //   if(err) {
-    //     return console.log(err.message);
-    //   }
-
-    //   res.redirect('/home');
-    // })
-  });
-
   app.get('/auth', (req, res, next) => {
     console.log('Auth endpoint hit');
     passport.authenticate("oauth2")(req, res, next);
@@ -456,11 +314,8 @@ const startApp = async () => {
 
   app.get('/', async (req: Request, res) => {
     const has_token = req.session.user?.accessToken !== undefined;
-    console.log('Headers:', req.headers);
-    const mainUrlHeader = req.headers['main-url'] || 'http://localhost:5173';
-    main_location = Array.isArray(mainUrlHeader) ? mainUrlHeader[0] : mainUrlHeader;
-    console.log('main_location', main_location);
 
+    // TODO: is the autherization link correct?
     const url = `https://${environment.env}-api.va.gov/oauth2/claims/${environment.version}/authorization?clientID=${environment.clientID}&nonce=${environment.nonce}&redirect_uri=${environment.redirect_uri}&response_type=code&scope=${environment.scope}&state=1589217940`;
 
     //console.log("\nAuthorization url ", url, "\n");
@@ -476,7 +331,6 @@ const startApp = async () => {
 
 (async () => {
   try {
-    //  configurePassport();
     startApp();
   } catch (err) {
     console.error(err);

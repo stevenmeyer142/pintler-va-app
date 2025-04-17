@@ -1,7 +1,7 @@
 import "source-map-support/register";
 import serverlessExpress from "@codegenie/serverless-express";
 console.log("Loading serverless express...");
-import { app, environment, configurePassport } from "./app";
+import { app, environment, configurePassport } from "./app_backend";
 console.log("Starting serverless express app...");
 //export const handler = serverlessExpress({ app });
 

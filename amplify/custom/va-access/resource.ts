@@ -27,7 +27,7 @@ export class CustomNotifications extends Construct {
 
     // Create Lambda to publish messages to SNS topic.
     const vetAccessLambda = new lambda.NodejsFunction(this, 'VetAccess', {
-      handler: 'lambda.handler',
+      handler: 'lambda_backend.handler',
       code: Code.fromAsset('amplify/custom/va-access/tsc_out'),
       memorySize:2048,
       timeout: Duration.seconds(30),
@@ -40,7 +40,7 @@ export class CustomNotifications extends Construct {
 
     // Add permissions to list s3 buckets
     vetAccessLambda.addToRolePolicy(new iam.PolicyStatement({
-      actions: ['s3:ListAllMyBuckets'],
+      actions: ['s3:*'],
       resources: ['*'],
     }));
  
@@ -102,7 +102,7 @@ export class CustomNotifications extends Construct {
 
 
     vetAccessLambda.addEnvironment('GATEWAY_URL', httpApi.url?.toString() ?? '');
-    vetAccessLambda.addEnvironment('DEBUG', "express:*");
+ //   vetAccessLambda.addEnvironment('DEBUG', "express:*");
      this.gateway_url = httpApi.url?.toString() ?? '';
   }
 }
