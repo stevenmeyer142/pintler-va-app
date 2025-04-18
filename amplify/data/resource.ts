@@ -1,5 +1,5 @@
 import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
-import { sayHello } from "../functions/say-hello/resource"
+import { importFHIR } from "../functions/import_fhir/resource"
 
 /*== STEP 1 ===============================================================
 The section below creates a Todo database table with a "content" field. Try
@@ -7,18 +7,32 @@ adding a new "isDone" field as a boolean. The authorization rule below
 specifies that any user authenticated via an API key can "create", "read",
 "update", and "delete" any "Todo" records.
 =========================================================================*/
-const schema = a.schema({
-   
-  sayHello: a
+const schema = a
+  .schema({
+    HealthLakeDatastore: a.model({
+      id: a.string(),
+      name: a.string(),
+      status: a.string(),
+      patient_icn: a.string(),
+      s3_input: a.string(),
+    })
+    .authorization(allow => [allow.guest()]),
+      
+    importFHIR: a
     .query()
     .arguments({
-      name: a.string(),
+      s3_input: a.string(),
+      patient_icn: a.string(),
     })
     .returns(a.string())
     .authorization(allow => [allow.guest()])
-    .handler(a.handler.function(sayHello)),
-  });
+    .handler(a.handler.function(importFHIR)),
+  }
+)
+  .authorization(allow => [allow.resource(importFHIR), allow.guest()]);
 
+
+  
 export type Schema = ClientSchema<typeof schema>;
 
 export const data = defineData({

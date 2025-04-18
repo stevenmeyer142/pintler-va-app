@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.data = void 0;
 const backend_1 = require("@aws-amplify/backend");
-const resource_1 = require("../functions/say-hello/resource");
+const resource_1 = require("../functions/import_fhir/resource");
 /*== STEP 1 ===============================================================
 The section below creates a Todo database table with a "content" field. Try
 adding a new "isDone" field as a boolean. The authorization rule below

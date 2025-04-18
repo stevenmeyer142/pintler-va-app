@@ -3,12 +3,12 @@ import { auth } from './auth/resource';
 
 import { data } from './data/resource';
 import { CustomNotifications } from './custom/va-access/resource';
-import { sayHello } from './functions/say-hello/resource';
+import { importFHIR } from './functions/import_fhir/resource';
 
 const backend = defineBackend({
   auth,
   data,
-  sayHello,
+  importFHIR,
 });
 
 

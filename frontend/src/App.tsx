@@ -1,27 +1,20 @@
-//import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 ////import { useAuthenticator } from '@aws-amplify/ui-react';
-// import type { Schema } from "../../amplify/data/resource"
- import { Amplify } from "aws-amplify"
-// import { generateClient } from "aws-amplify/data";
-import outputs from "../../amplify_outputs.json";
-//import dotenv from 'dotenv';
-//import fs from 'fs';
-// import { secret } from '@aws-amplify/backend';
-// const clientId = secret('VA_Health_Client_ID');
-// const clientSecret = secret('VA_Health_Client_Secret');
-
-// //const clientSecret = envConfig.CLIENT_SECRET || '';
-
-Amplify.configure(outputs)
-//const client = generateClient<Schema>();
-// const clientId = "clent_id";
-// const clientSecret = "client_secret";
-import { BrowserRouter as Router, Route, Routes, useSearchParams } from "react-router-dom";
+ import { BrowserRouter as Router, Route, Routes, useSearchParams } from "react-router-dom";
 import {deleteBucketAndObjects} from "./aws_frontend_s3";
+import type { Schema } from "../../amplify/data/resource"
+import { Amplify } from "aws-amplify";
+import outputs from "../../amplify_outputs.json";
+Amplify.configure(outputs);
+import { generateClient } from "aws-amplify/api"
+
+const client = generateClient<Schema>()
+
 
  var patientId = "";
  var patientBucket = "";
  var patientObjectKey = "";
+ var s3_input = "";
 
  async function deleteBucket() {
     try {
@@ -34,17 +27,36 @@ import {deleteBucketAndObjects} from "./aws_frontend_s3";
  }  
 }
 async function importToHealthLake() {
+  console.log("Importing to HealthLake...");
+  const result = await client.queries.importFHIR({
+    s3_input: s3_input,
+    patient_icn: patientId,
+  })
+
+  console.log("Import result:", result);
 }
 
 function debugDisplayPatient() {
   patientId = "5000335";
   patientBucket = "va-patient-icn-5000335-2e44550c-979f-46fb-8556-19eea220a5aa";
   patientObjectKey = "patient_record";
+  s3_input = `s3://${patientBucket}/${patientObjectKey}`;
   
   window.location.href = `/display_patient?patientId=${patientId}&patientBucket=${patientBucket}&patientObjectKey=${patientObjectKey}`;
 }
 
   function DisplayPatient() {
+    const [HealthLakeDatastore, setHealthLakeDatastore] = useState<Array<Schema["HealthLakeDatastore"]["type"]>>([]);
+
+    useEffect(() => {
+      client.models.HealthLakeDatastore.observeQuery({
+        filter: {
+          id: { eq: s3_input },
+        },
+      }).subscribe({
+        next: (data) => setHealthLakeDatastore([...data.items]),
+      })});
+
     const [searchParams] = useSearchParams();
     patientId = searchParams.get("patientId") || "Not provided";
     patientBucket = searchParams.get("patientBucket") || "Not provided";
@@ -53,10 +65,12 @@ function debugDisplayPatient() {
     return (
       <div>
         <h1>Patient Details</h1>
+        <p><strong>Status:</strong> {HealthLakeDatastore.length > 0 ? HealthLakeDatastore[0].status : "Not found"}</p>
         <p><strong>Patient ICN:</strong> {patientId}</p>
         <p><strong>Patient Bucket:</strong> {patientBucket}</p>
         <p><strong>Patient Opject Key:</strong> {patientObjectKey }</p>
-        <button onClick={deleteBucket}>Delete Bucket</button>
+        <p><button onClick={deleteBucket}>Delete Bucket</button></p>
+        <p><button onClick={importToHealthLake}>Import To Healthlake</button></p>
         </div>
 
       
@@ -94,11 +108,12 @@ function debugDisplayPatient() {
  
  
 function App() {
- // const [todos, setTodos] = useState<Array<Schema["Todo"]["type"]>>([]);
-
+ 
  //const { signOut } = useAuthenticator();
 function signOut() {
 }
+
+
 
 function DisplayMain() {
   return (
@@ -113,12 +128,7 @@ function DisplayMain() {
 }
 
 
-  // useEffect(() => {
-  //   client.models.Todo.observeQuery().subscribe({
-  //     next: (data) => setTodos([...data.items]),
-  //   });
-  // }, []);
-
+  
     
   // function deleteTodo(id: string) {
   // //  client.models.Todo.delete({ id })

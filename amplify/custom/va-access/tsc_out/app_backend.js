@@ -200,7 +200,7 @@ const startApp = () => __awaiter(void 0, void 0, void 0, function* () {
                     const opjectKey = 'patient_record';
                     const bucketName = yield (0, aws_backend_s3_1.createBucketAndUploadFile)(patient_icn, opjectKey, patient_record);
                     console.log('Created bucket', bucketName);
-                    const redirectUrl = `${main_location}display_patient?patientID=${patient_icn}&patientBucket=${bucketName}&patientObjectKey=${opjectKey}`;
+                    const redirectUrl = `${main_location}display_patient?patientId=${patient_icn}&patientBucket=${bucketName}&patientObjectKey=${opjectKey}`;
                     res.redirect(redirectUrl);
                 }
                 catch (error) {

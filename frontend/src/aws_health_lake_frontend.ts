@@ -47,7 +47,7 @@ const waitDataStoreActive = async (dataStoreId: string, callback?: (status: Data
     }
 }
 
-async function startFHIRImportJob(job_name: str,
+async function startFHIRImportJob(job_name: string,
     datastore_id: string,
     input_s3_uri: string,
     job_output_s3_uri: string,
@@ -55,8 +55,19 @@ async function startFHIRImportJob(job_name: str,
     data_access_role_arn: string) {
     try {
         const response = await healthLakeClientInstance.send(new StartFHIRImportJobCommand({
-            DatastoreId: dataStoreId,
-            InputS3Uri: `s3://${s3Bucket}/${s3ObjectKey}`
+            JobName: job_name,
+            InputDataConfig: {
+                S3Uri: input_s3_uri
+            },
+            JobOutputDataConfig: {
+                S3Configuration: {
+                    S3Uri: job_output_s3_uri,
+                    KmsKeyId: kms_key_id,
+                },
+            },
+            DatastoreId : datastore_id,
+            DataAccessRoleArn : data_access_role_arn,
+
         }));
         console.log("FHIR import job started successfully:", response);
         return response; // Return the response as a dictionary
