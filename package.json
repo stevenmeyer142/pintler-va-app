@@ -18,9 +18,7 @@
     "@codegenie/serverless-express": "^4.3.10",
     "cors": "^2.8.5",
     "compression": "^1.7.4",
-    "ejs": "^3.1.6",
-    "@aws-sdk/client-sns": "^3.33.0",
-    "@aws-sdk/client-ses": "^3.33.0"
+    "ejs": "^3.1.6"
   },
   "devDependencies": {
     "@aws-amplify/backend": "^1.5.0",

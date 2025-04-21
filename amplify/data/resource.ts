@@ -1,5 +1,6 @@
 import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
 import { importFHIR } from "../functions/import_fhir/resource"
+import { AllowListReceiptFilter } from "aws-cdk-lib/aws-ses";
 
 /*== STEP 1 ===============================================================
 The section below creates a Todo database table with a "content" field. Try
@@ -9,15 +10,6 @@ specifies that any user authenticated via an API key can "create", "read",
 =========================================================================*/
 const schema = a
   .schema({
-    HealthLakeDatastore: a.model({
-      id: a.string(),
-      name: a.string(),
-      status: a.string(),
-      patient_icn: a.string(),
-      s3_input: a.string(),
-    })
-    .authorization(allow => [allow.guest()]),
-      
     importFHIR: a
     .query()
     .arguments({
@@ -25,24 +17,31 @@ const schema = a
       patient_icn: a.string(),
     })
     .returns(a.string())
-    .authorization(allow => [allow.guest()])
+    .authorization(allow => [allow.publicApiKey()])
     .handler(a.handler.function(importFHIR)),
-  }
+
+    HealthLakeDatastore: a.model({
+      id: a.string(),
+      name: a.string(),
+      status: a.string(),
+      patient_icn: a.string(),
+      s3_input: a.string(),
+    })
+    .authorization(allow => [allow.publicApiKey()]),
+      
+   }
 )
-  .authorization(allow => [allow.resource(importFHIR), allow.guest()]);
+.authorization(allow => [allow.resource(importFHIR)]);
 
 
   
 export type Schema = ClientSchema<typeof schema>;
 
-export const data = defineData({
+export const data = defineData({ 
   schema,
   authorizationModes: {
-    defaultAuthorizationMode: "apiKey",
-    // API Key is used for a.allow.public() rules
-    apiKeyAuthorizationMode: {
-      expiresInDays: 30,
-    },
+        defaultAuthorizationMode: 'apiKey',
+    apiKeyAuthorizationMode: { expiresInDays: 30 }
   },
 });
 
