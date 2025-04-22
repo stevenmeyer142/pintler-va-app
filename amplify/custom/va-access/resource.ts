@@ -1,14 +1,11 @@
-import * as url from 'node:url';
-import { Runtime, Code, LayerVersion } from 'aws-cdk-lib/aws-lambda';
+import { Runtime, Code } from 'aws-cdk-lib/aws-lambda';
 import * as lambda from 'aws-cdk-lib/aws-lambda-nodejs';
-import apigateway from 'aws-cdk-lib/aws-apigateway';
 import apigwv2, { HttpMethod } from 'aws-cdk-lib/aws-apigatewayv2';
 import { Construct } from 'constructs';
-import { SelfManagedKafkaEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { Duration } from 'aws-cdk-lib/core';
-import { secret } from '@aws-amplify/backend';
+import {Key} from 'aws-cdk-lib/aws-kms';
 
 
 export type Message = {
@@ -17,13 +14,11 @@ export type Message = {
   recipient: string;
 };
 
-export class CustomNotifications extends Construct {
-  public readonly topic: string;
+export class VAAccessConstruct extends Construct {
   public readonly gateway_url: string;
+  public readonly kms_key: Key;
   constructor(scope: Construct, id: string) {
     super(scope, id);
-
-    this.topic = "arn:aws:sns:us-east-1:123456789012:MyTopic";
 
     // Create Lambda to publish messages to SNS topic.
     const vetAccessLambda = new lambda.NodejsFunction(this, 'VetAccess', {
@@ -104,5 +99,7 @@ export class CustomNotifications extends Construct {
     vetAccessLambda.addEnvironment('GATEWAY_URL', httpApi.url?.toString() ?? '');
  //   vetAccessLambda.addEnvironment('DEBUG', "express:*");
      this.gateway_url = httpApi.url?.toString() ?? '';
+
+     this.kms_key = new Key(this, 'VAAccessKMSKey');
   }
 }

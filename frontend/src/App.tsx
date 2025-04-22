@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 ////import { useAuthenticator } from '@aws-amplify/ui-react';
- import { BrowserRouter as Router, Route, Routes, useSearchParams } from "react-router-dom";
-import {deleteBucketAndObjects} from "./aws_frontend_s3";
+import { BrowserRouter as Router, Route, Routes, useSearchParams } from "react-router-dom";
 import type { Schema } from "../../amplify/data/resource"
 import { Amplify } from "aws-amplify";
 import outputs from "../../amplify_outputs.json";
@@ -18,8 +17,8 @@ const client = generateClient<Schema>()
 
  async function deleteBucket(bucketName: string) {
     try {
-      console.log("Deleting bucket and objects...");
-      await deleteBucketAndObjects(bucketName);
+      console.log(`Deleting bucket "${bucketName}" and objects...`);
+      // await deleteBucketAndObjects(bucketName);
       console.log("Bucket deleted successfully");
     }
     catch (error) {
@@ -65,16 +64,7 @@ function App() {
  //const { signOut } = useAuthenticator();
 function signOut() {
 }
-async function importToHealthLake(patientId : string, s3_input : string) {
-  console.log("Importing to HealthLake... s3_input:", s3_input);
- 
-  const result = await client.queries.importFHIR({
-    s3_input: s3_input,
-    patient_icn: patientId,
-  })
 
-  console.log("Import result:", result);
-}
 
 function debugDisplayPatient() {
   
@@ -88,6 +78,7 @@ function debugDisplayPatient() {
 
   function DisplayPatient() {
     const [HealthLakeDatastore, setHealthLakeDatastore] = useState<Array<Schema["HealthLakeDatastore"]["type"]>>([]);
+    const [DataStoreID, setDataStoreID] = useState<string>("Not Set");
     const [searchParams] = useSearchParams();
     const patientId = searchParams.get("patientId") || "Not provided";
     const patientBucket = searchParams.get("patientBucket") || "Not provided";
@@ -102,7 +93,17 @@ function debugDisplayPatient() {
         next: (data) => setHealthLakeDatastore([...data.items]),
       })});
 
-   
+      async function importToHealthLake(patientId : string, s3_input : string) {
+        console.log("Importing to HealthLake... s3_input:", s3_input);
+       
+        const result = await client.queries.importFHIR({
+          s3_input: s3_input,
+          patient_icn: patientId,
+        })
+      
+        console.log("Import result:", result);
+        setDataStoreID("placeholder");
+      }  
     return (
       <div>
         <h1>Patient Details</h1>
@@ -110,6 +111,7 @@ function debugDisplayPatient() {
         <p><strong>Patient ICN:</strong> {patientId}</p>
         <p><strong>Patient Bucket:</strong> {patientBucket}</p>
         <p><strong>Patient Opject Key:</strong> {patientObjectKey }</p>
+        <p><strong>HealthLake Data Store ID:</strong> {DataStoreID }</p>
         <p><button onClick={() => deleteBucket(patientBucket)}>Delete Bucket</button></p>
         <p><button onClick={() => importToHealthLake(patientId,s3_input)}>Import To Healthlake</button></p>
         </div>

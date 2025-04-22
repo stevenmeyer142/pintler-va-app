@@ -1,11 +1,11 @@
 import { HealthLakeClient, CreateFHIRDatastoreCommand, DatastoreStatus, DescribeFHIRDatastoreCommand,
-    StartFHIRImportJobCommand, DescribeFHIRImportJobCommand,
+    StartFHIRImportJobCommand, DescribeFHIRImportJobCommand, DeleteFHIRDatastoreCommand,
     JobStatus} from "@aws-sdk/client-healthlake";
- } from "@aws-sdk/client-healthlake";
+
 
 export const healthLakeClientInstance = new HealthLakeClient();
 
-const createHealthLakeDataStore = async (dataStoreName: string) => {
+export const createHealthLakeDataStore = async (dataStoreName: string) => {
     try {
         
         const response = await healthLakeClientInstance.send(new CreateFHIRDatastoreCommand({
@@ -20,7 +20,7 @@ const createHealthLakeDataStore = async (dataStoreName: string) => {
     }
 }
 
-const waitDataStoreActive = async (dataStoreId: string, callback?: (status: DatastoreStatus) => void) => {
+export const waitDataStoreActive = async (dataStoreId: string, callback: (status: DatastoreStatus) => void) => {
     try {
         let status: DatastoreStatus = DatastoreStatus.CREATING; // Initial status
         while (status === DatastoreStatus.CREATING) {
@@ -31,9 +31,8 @@ const waitDataStoreActive = async (dataStoreId: string, callback?: (status: Data
             console.log("Data store status:", status);
 
             // Invoke the callback with the current status if provided
-            if (callback) {
-                callback(status);
-            }
+            callback(status);
+
 
             if (status !== DatastoreStatus.CREATING) {
                 break;
@@ -76,7 +75,7 @@ async function startFHIRImportJob(job_name: string,
         throw error; // Re-throw the error for the caller to handle
     }
 }
-
+ 
 async function waitFHIRImportJobComplete(dataStoreId: string,  importJobID :string, callback?: (status: JobStatus) => void) {
     try {
         let status: JobStatus = JobStatus.SUBMITTED; // Initial status
@@ -101,6 +100,19 @@ async function waitFHIRImportJobComplete(dataStoreId: string,  importJobID :stri
         return status; // Return the final status
     } catch (error) {
         console.error("Error waiting for FHIR import job to complete:", error);
+        throw error; // Re-throw the error for the caller to handle
+    }
+}
+
+const deleteHealthLakeDataStore = async (dataStoreId: string) => {
+    try {
+        const response = await healthLakeClientInstance.send(new DeleteFHIRDatastoreCommand({
+            DatastoreId: dataStoreId
+        }));
+        console.log("Data store deleted successfully:", response);
+        return response; // Return the response as a dictionary
+    } catch (error) {
+        console.error("Error deleting data store:", error);
         throw error; // Re-throw the error for the caller to handle
     }
 }
