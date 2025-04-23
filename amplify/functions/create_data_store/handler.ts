@@ -2,23 +2,23 @@ import type { Schema } from '../../data/resource';
 import { Amplify } from 'aws-amplify';
 import { generateClient } from 'aws-amplify/data';
 import outputs from "../../../amplify_outputs.json"
-import {createHealthLakeDataStore, waitDataStoreActive} from './import_fhir_aws_health_lake';
+import {createHealthLakeDataStore, waitDataStoreActive} from './create_datastore_aws_health_lake';
 
 Amplify.configure(outputs);
 
 const client = generateClient<Schema>();
 
-export const handler: Schema["importFHIR"]["functionHandler"] = async (event): Promise<string | null> => {
-  const { s3_input, patient_icn } = event.arguments
+export const handler: Schema["createDataStore"]["functionHandler"] = async (event): Promise<string> => {
+  const { id, name, s3_input, patient_icn } = event.arguments
   console.log("Calling importFHIR with arguments:", event.arguments);
 
-  if (!s3_input || !patient_icn) {
-    console.error("s3_input and patient_icn are required");
-    return "s3_input and patient_icn are required";
+  if (!id || !name || !s3_input || !patient_icn) {
+    console.error("id, name, s3_input and patient_icn are required");
+    throw "id, name, s3_input and patient_icn are required";
   }
 
   const { data: healthLakeDatastoreResult, errors } = await client.models.HealthLakeDatastore.get({
-    id: s3_input,
+    id: id,
   });
   if (errors) {
     console.error("Error getting healhLake data", errors);
@@ -46,7 +46,7 @@ export const handler: Schema["importFHIR"]["functionHandler"] = async (event): P
     healthLakeDatastore =
     {
       s3_input: s3_input,
-      id: s3_input,
+      id: id,
       patient_icn: patient_icn,
       name: 'test',
       status: 'test',

@@ -101,7 +101,9 @@ function debugDisplayPatient() {
        
         const result = await client.queries.createDataStore({
           id: s3_input,
-          name: patientId,
+          name: "test",
+          s3_input: s3_input,
+          patient_icn: patientId,
         });
       
         console.log("Create data store result:", result);
@@ -118,6 +120,7 @@ function debugDisplayPatient() {
         });
       
         console.log("Import FHIR result:", result);
+        setDataStoreID("placeholder");
       }  
   return (
       <div>

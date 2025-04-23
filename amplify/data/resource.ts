@@ -9,6 +9,7 @@ adding a new "isDone" field as a boolean. The authorization rule below
 specifies that any user authenticated via an API key can "create", "read",
 "update", and "delete" any "Todo" records.
 =========================================================================*/
+
 const schema = a
   .schema({
     createDataStore: a
@@ -16,12 +17,10 @@ const schema = a
     .arguments({
       id: a.string(),
       name: a.string(),
+      s3_input: a.string(),
+      patient_icn: a.string(),
     })
-    .returns({
-      success: a.boolean(),
-      message:a.string(),
-      datastore_id: a.string(),
-    })
+    .returns(a.string())
     .authorization(allow => [allow.publicApiKey()])
     .handler(a.handler.function(createDataStore)),
 
@@ -32,10 +31,7 @@ const schema = a
       s3_input: a.string(),
       patient_icn: a.string(),
     })
-    .returns({
-      success: a.boolean(),
-      message:a.string()
-    })
+    .returns(a.string())
     .authorization(allow => [allow.publicApiKey()])
     .handler(a.handler.function(importFHIR)),
 
