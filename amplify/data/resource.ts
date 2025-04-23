@@ -1,6 +1,7 @@
 import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
 import { importFHIR } from "../functions/import_fhir/resource"
-import { AllowListReceiptFilter } from "aws-cdk-lib/aws-ses";
+import { deleteBucket } from "../functions/delete_bucket/resource"
+import { createDataStore } from "../functions/create_data_store/resource";
 
 /*== STEP 1 ===============================================================
 The section below creates a Todo database table with a "content" field. Try
@@ -10,15 +11,42 @@ specifies that any user authenticated via an API key can "create", "read",
 =========================================================================*/
 const schema = a
   .schema({
+    createDataStore: a
+    .query()
+    .arguments({
+      id: a.string(),
+      name: a.string(),
+    })
+    .returns({
+      success: a.boolean(),
+      message:a.string(),
+      datastore_id: a.string(),
+    })
+    .authorization(allow => [allow.publicApiKey()])
+    .handler(a.handler.function(createDataStore)),
+
     importFHIR: a
     .query()
     .arguments({
+      id: a.string(),
       s3_input: a.string(),
       patient_icn: a.string(),
     })
-    .returns(a.string())
+    .returns({
+      success: a.boolean(),
+      message:a.string()
+    })
     .authorization(allow => [allow.publicApiKey()])
     .handler(a.handler.function(importFHIR)),
+
+    deleteBucket: a
+    .query()
+    .arguments({
+      bucket_name: a.string(),
+    })
+    .returns(a.string())
+    .authorization(allow => [allow.publicApiKey()])
+    .handler(a.handler.function(deleteBucket)),
 
     HealthLakeDatastore: a.model({
       id: a.string(),
@@ -26,6 +54,7 @@ const schema = a
       status: a.string(),
       patient_icn: a.string(),
       s3_input: a.string(),
+      datastore_id: a.string(),
     })
     .authorization(allow => [allow.publicApiKey()]),
       

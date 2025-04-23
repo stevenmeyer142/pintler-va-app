@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config(); // This is probably not needed.
 import axios from 'axios';
 import express, { Request, Response, NextFunction } from "express";
 import 'os';
@@ -8,6 +8,7 @@ import {
 } from "@aws-sdk/client-secrets-manager";
 
 import { createBucketAndUploadFile } from './aws_backend_s3';
+
 
 class User {
   accessToken!: string;
@@ -32,6 +33,7 @@ import bodyParser from 'body-parser';
 
 var patient_record = "No patient record retrieved yet.";
 var main_location: string = "";
+var kms_key: string = "";
 
 class Environment {
   env: string = "sandbox";
@@ -253,7 +255,7 @@ const startApp = async () => {
           
           try {
             const opjectKey = 'patient_record';
-          const bucketName = await createBucketAndUploadFile(patient_icn, opjectKey, patient_record);
+          const bucketName = await createBucketAndUploadFile(patient_icn, opjectKey, patient_record, kms_key);
           
           console.log('Created bucket', bucketName);
           const redirectUrl = `${main_location}display_patient?patientId=${patient_icn}&patientBucket=${bucketName}&patientObjectKey=${opjectKey}`;
@@ -287,11 +289,12 @@ const startApp = async () => {
 
   app.put('/set_session_values', (req: Request, res) => {
     console.log('Patient endpoint hit');
-    if (req.body.main_location) {
+    if (req.body.main_location && req.body.kms_key) {
       main_location = req.body.main_location;
-      res.status(200).send({ message: "main_location updated successfully" });
+      kms_key = req.body.kms_key;
+      res.status(200).send({ message: "main_location and kms_key updated successfully" });
     } else {
-      res.status(400).send({ error: "main_location is required in the request body" });
+      res.status(400).send({ error: "main_location and kms_kdy are required in the request body" });
     }
   });
 

@@ -16,7 +16,7 @@ export type Message = {
 
 export class VAAccessConstruct extends Construct {
   public readonly gateway_url: string;
-  public readonly kms_key: Key;
+  public readonly kms_key: Key; 
   constructor(scope: Construct, id: string) {
     super(scope, id);
 
@@ -35,7 +35,7 @@ export class VAAccessConstruct extends Construct {
 
     // Add permissions to list s3 buckets
     vetAccessLambda.addToRolePolicy(new iam.PolicyStatement({
-      actions: ['s3:*'],
+      actions: ['s3:*', "kms:GenerateDataKey"],
       resources: ['*'],
     }));
  

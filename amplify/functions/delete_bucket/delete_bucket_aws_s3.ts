@@ -17,7 +17,7 @@ export async function deleteBucketAndObjects(bucketName: string): Promise<void> 
                         Key: object.Key,
                     });
                     await client.send(deleteCommand);
-                    await waitUntilObjectNotExists({ client: client, maxWaitTime: 5 }, { Bucket: bucketName, Key: object.Key });
+                    await waitUntilObjectNotExists({ client: client, maxWaitTime: 6 }, { Bucket: bucketName, Key: object.Key });
                 }
             }
         }

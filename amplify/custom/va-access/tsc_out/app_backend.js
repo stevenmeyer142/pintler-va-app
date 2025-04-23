@@ -13,7 +13,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.configurePassport = exports.environment = exports.app = void 0;
-require('dotenv').config();
+require('dotenv').config(); // This is probably not needed.
 const axios_1 = __importDefault(require("axios"));
 const express_1 = __importDefault(require("express"));
 require("os");
@@ -29,6 +29,7 @@ const passport_oauth2_1 = __importDefault(require("passport-oauth2"));
 const body_parser_1 = __importDefault(require("body-parser"));
 var patient_record = "No patient record retrieved yet.";
 var main_location = "";
+var kms_key = "";
 class Environment {
     constructor() {
         this.env = "sandbox";
@@ -198,7 +199,7 @@ const startApp = () => __awaiter(void 0, void 0, void 0, function* () {
                 patient_record = JSON.stringify(response.data, null, 2);
                 try {
                     const opjectKey = 'patient_record';
-                    const bucketName = yield (0, aws_backend_s3_1.createBucketAndUploadFile)(patient_icn, opjectKey, patient_record);
+                    const bucketName = yield (0, aws_backend_s3_1.createBucketAndUploadFile)(patient_icn, opjectKey, patient_record, kms_key);
                     console.log('Created bucket', bucketName);
                     const redirectUrl = `${main_location}display_patient?patientId=${patient_icn}&patientBucket=${bucketName}&patientObjectKey=${opjectKey}`;
                     res.redirect(redirectUrl);
@@ -228,12 +229,13 @@ const startApp = () => __awaiter(void 0, void 0, void 0, function* () {
     });
     app.put('/set_session_values', (req, res) => {
         console.log('Patient endpoint hit');
-        if (req.body.main_location) {
+        if (req.body.main_location && req.body.kms_key) {
             main_location = req.body.main_location;
-            res.status(200).send({ message: "main_location updated successfully" });
+            kms_key = req.body.kms_key;
+            res.status(200).send({ message: "main_location and kms_key updated successfully" });
         }
         else {
-            res.status(400).send({ error: "main_location is required in the request body" });
+            res.status(400).send({ error: "main_location and kms_kdy are required in the request body" });
         }
     });
     app.get('/auth', (req, res, next) => {

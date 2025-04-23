@@ -1,8 +1,8 @@
-import { S3Client, CreateBucketCommand, waitUntilBucketExists, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, CreateBucketCommand, waitUntilBucketExists, PutObjectCommand, PutBucketEncryptionCommand } from "@aws-sdk/client-s3";
 import { v4 as uuidv4 } from "uuid";
 const client = new S3Client({});
 
-export async function createBucketAndUploadFile(patientId: string, objectKey: string, fileContent: string): Promise<string> {
+export async function createBucketAndUploadFile(patientId: string, objectKey: string, fileContent: string, kms_key: string): Promise<string> {
     const maxBucketNameLength = 63;
     const bucketNameBase = `va-patient-icn-${patientId.toLowerCase()}-${uuidv4()}`;
     const bucketName = bucketNameBase.substring(0, maxBucketNameLength);
@@ -11,10 +11,26 @@ export async function createBucketAndUploadFile(patientId: string, objectKey: st
         // Create a new S3 bucket
         const createBucketCommand = new CreateBucketCommand({
             Bucket: bucketName,
+
         });
 
         await client.send(createBucketCommand);
         await waitUntilBucketExists({ client: client, maxWaitTime: 6 }, { Bucket: bucketName });
+
+        const putBucketEncryptionCommand = new PutBucketEncryptionCommand({
+            Bucket: bucketName,
+            ServerSideEncryptionConfiguration: {
+                Rules: [
+                    {
+                        ApplyServerSideEncryptionByDefault: {
+                            SSEAlgorithm: "aws:kms",
+                            KMSMasterKeyID: kms_key,
+                        },
+                    },
+                ],
+            },
+        });
+        await client.send(putBucketEncryptionCommand);
 
         const putObjectCommand = new PutObjectCommand({
             Bucket: bucketName,

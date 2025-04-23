@@ -4,7 +4,7 @@
     "module": "commonjs",
     "outDir": "../tsc_out",
     "rootDir": ".",
-    "strict": true,
+    "strict": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,

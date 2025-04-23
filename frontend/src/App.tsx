@@ -18,8 +18,10 @@ const client = generateClient<Schema>()
  async function deleteBucket(bucketName: string) {
     try {
       console.log(`Deleting bucket "${bucketName}" and objects...`);
-      // await deleteBucketAndObjects(bucketName);
-      console.log("Bucket deleted successfully");
+      const result = await client.queries.deleteBucket({
+        bucket_name: bucketName,
+      });
+      console.log("Bucket with result:", result);
     }
     catch (error) {
       console.error("Error deleting bucket:", error);
@@ -32,6 +34,7 @@ const client = generateClient<Schema>()
     
       const requestBody = {
         main_location: window.location.href,
+        kms_key: outputs.custom.kmsKey,
       };
 
       fetch(`${outputs.custom.gatewayURL}set_session_values`, {
@@ -69,7 +72,7 @@ function signOut() {
 function debugDisplayPatient() {
   
   const patientId = "5000335";
-  const patientBucket = "va-patient-icn-5000335-2e44550c-979f-46fb-8556-19eea220a5aa";
+  const patientBucket = "va-patient-icn-5000335-7e6ae964-60fd-4289-adcb-a20a01276655";
   const patientObjectKey = "patient_record";
 
   
@@ -93,18 +96,30 @@ function debugDisplayPatient() {
         next: (data) => setHealthLakeDatastore([...data.items]),
       })});
 
+      async function createDataStore(patientId : string, s3_input : string) {
+        console.log("Importing to HealthLake... s3_input:", s3_input);
+       
+        const result = await client.queries.createDataStore({
+          id: s3_input,
+          name: patientId,
+        });
+      
+        console.log("Create data store result:", result);
+        setDataStoreID("placeholder");
+      }  
+      
       async function importToHealthLake(patientId : string, s3_input : string) {
         console.log("Importing to HealthLake... s3_input:", s3_input);
        
         const result = await client.queries.importFHIR({
+          id: s3_input,
           s3_input: s3_input,
-          patient_icn: patientId,
-        })
+          patient_icn: patientId
+        });
       
-        console.log("Import result:", result);
-        setDataStoreID("placeholder");
+        console.log("Import FHIR result:", result);
       }  
-    return (
+  return (
       <div>
         <h1>Patient Details</h1>
         <p><strong>Status:</strong> {HealthLakeDatastore.length > 0 ? HealthLakeDatastore[0].status : "Not found"}</p>
@@ -112,8 +127,9 @@ function debugDisplayPatient() {
         <p><strong>Patient Bucket:</strong> {patientBucket}</p>
         <p><strong>Patient Opject Key:</strong> {patientObjectKey }</p>
         <p><strong>HealthLake Data Store ID:</strong> {DataStoreID }</p>
-        <p><button onClick={() => deleteBucket(patientBucket)}>Delete Bucket</button></p>
+        <p><button onClick={() => createDataStore(patientId,s3_input)}>Create Datastore</button></p>
         <p><button onClick={() => importToHealthLake(patientId,s3_input)}>Import To Healthlake</button></p>
+        <p><button onClick={() => deleteBucket(patientBucket)}>Delete Bucket</button></p>
         </div>
 
       
