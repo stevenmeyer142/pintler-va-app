@@ -67,6 +67,10 @@ function App() {
  //const { signOut } = useAuthenticator();
 function signOut() {
 }
+ async function deleteHealthLakeImport(id: string) {
+  // client.models.Todo.delete({ id })
+  console.log("Deleting health lake import with id:", id);
+ }
 
 
 function debugDisplayPatient() {
@@ -123,6 +127,7 @@ function debugDisplayPatient() {
         setDataStoreID("placeholder");
       }  
   return (
+    <div>
       <div>
         <h1>Patient Details</h1>
         <p><strong>Status:</strong> {HealthLakeDatastore.length > 0 ? HealthLakeDatastore[0].status : "Not found"}</p>
@@ -133,7 +138,18 @@ function debugDisplayPatient() {
         <p><button onClick={() => createDataStore(patientId,s3_input)}>Create Datastore</button></p>
         <p><button onClick={() => importToHealthLake(patientId,s3_input)}>Import To Healthlake</button></p>
         <p><button onClick={() => deleteBucket(patientBucket)}>Delete Bucket</button></p>
-        </div>
+      </div>
+      <div>    
+      <ul>
+        {HealthLakeDatastore.map((HealthLakeDatastore) => (
+          
+          <li 
+          onClick={() => HealthLakeDatastore.id && deleteHealthLakeImport(HealthLakeDatastore.id)}
+          key={HealthLakeDatastore.id}>{HealthLakeDatastore.patient_icn}</li>
+        ))}
+      </ul>
+      </div>
+      </div>
 
       
     );

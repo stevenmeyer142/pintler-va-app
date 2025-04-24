@@ -36,7 +36,11 @@ const statement1 = new iam.PolicyStatement({
   actions: ["healthlake:*",
           "s3:*",
           "iam:*",
-          "ram:*"],
+          "ram:*",
+          "kms:*",
+        "logs:*",
+          "cloudwatch:*",
+        "glue:*"],
   resources: ["*"],
   effect: iam.Effect.ALLOW,
 })
@@ -61,7 +65,7 @@ const adminAccess = new iam.PolicyStatement({
 })
 
 
-createDataStoreLambda.addToRolePolicy(statement1)
+createDataStoreLambda.addToRolePolicy(statement1);
 // importFHIRLambda.addToRolePolicy(statement2)
 //importFHIRLambda.addToRolePolicy(adminAccess)
 
