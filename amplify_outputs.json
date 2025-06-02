@@ -74,6 +74,13 @@
               "isRequired": false,
               "attributes": []
             },
+            "s3_output": {
+              "name": "s3_output",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
             "datastore_id": {
               "name": "datastore_id",
               "isArray": false,
@@ -165,6 +172,12 @@
               "type": "String",
               "isRequired": false
             },
+            "s3_output": {
+              "name": "s3_output",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false
+            },
             "patient_icn": {
               "name": "patient_icn",
               "isArray": false,
@@ -181,18 +194,6 @@
           "arguments": {
             "id": {
               "name": "id",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false
-            },
-            "s3_input": {
-              "name": "s3_input",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false
-            },
-            "patient_icn": {
-              "name": "patient_icn",
               "isArray": false,
               "type": "String",
               "isRequired": false
@@ -219,6 +220,7 @@
   "version": "1.2",
   "custom": {
     "gatewayURL": "https://5con67g9uc.execute-api.us-east-1.amazonaws.com/",
-    "kmsKey": "1da99112-d8ff-4497-ae91-9aeef365d11d"
+    "kmsKey": "1da99112-d8ff-4497-ae91-9aeef365d11d",
+    "dataAccessRoleArn": "arn:aws:iam::211125690245:role/amplify-pintlervaapp-stev-ImportFHIRConstructVAHeal-oVCRGgXAlOHL"
   }
 }

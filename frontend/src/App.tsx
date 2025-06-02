@@ -67,7 +67,7 @@ function App() {
  //const { signOut } = useAuthenticator();
 function signOut() {
 }
- async function deleteHealthLakeImport(id: string) {
+ async function setToCurrentDatastoreRecord(id: string) {
   // client.models.Todo.delete({ id })
   console.log("Deleting health lake import with id:", id);
  }
@@ -76,7 +76,7 @@ function signOut() {
 function debugDisplayPatient() {
   
   const patientId = "5000335";
-  const patientBucket = "va-patient-icn-5000335-7e6ae964-60fd-4289-adcb-a20a01276655";
+  const patientBucket = "va-patient-icn-5000335-38ed5ac2-96c7-4061-9171-da7ddf2d82cd";
   const patientObjectKey = "patient_record";
 
   
@@ -84,20 +84,16 @@ function debugDisplayPatient() {
 }
 
   function DisplayPatient() {
-    const [HealthLakeDatastore, setHealthLakeDatastore] = useState<Array<Schema["HealthLakeDatastore"]["type"]>>([]);
-    const [DataStoreID, setDataStoreID] = useState<string>("Not Set");
+    const [HealthLakeDatastoresArray, setHealthLakeDatastoresArray] = useState<Array<Schema["HealthLakeDatastore"]["type"]>>([]);
+    const [CurrentDataStoreRecord, setCurrentDataStoreRecord] = useState<Schema["HealthLakeDatastore"]["type"] | undefined>(undefined);
     const [searchParams] = useSearchParams();
-    const patientId = searchParams.get("patientId") || "Not provided";
+    var patientId = searchParams.get("patientId") || "Not provided";
     const patientBucket = searchParams.get("patientBucket") || "Not provided";
     const patientObjectKey = searchParams.get("patientObjectKey")|| "Not provided";
-    const s3_input = `s3://${patientBucket}/${patientObjectKey}`;
+    var s3_input = `s3://${patientBucket}/${patientObjectKey}`;
     useEffect(() => {
-      client.models.HealthLakeDatastore.observeQuery({
-        filter: {
-          id: { eq: s3_input },
-        },
-      }).subscribe({
-        next: (data) => setHealthLakeDatastore([...data.items]),
+      client.models.HealthLakeDatastore.observeQuery().subscribe({
+        next: (data) => setHealthLakeDatastoresArray([...data.items]),
       })});
 
       async function createDataStore(patientId : string, s3_input : string) {
@@ -111,41 +107,55 @@ function debugDisplayPatient() {
         });
       
         console.log("Create data store result:", result);
-        setDataStoreID("placeholder");
       }  
+
+      // function to set the current datastore record index with an int 
       
-      async function importToHealthLake(patientId : string, s3_input : string) {
+      async function setToCurrentDatastoreRecord(index: number) {
+        console.log("Setting current datastore record index to:", index);
+        if (index >= 0 && index < HealthLakeDatastoresArray.length) {
+          const currentRecord = HealthLakeDatastoresArray[index];
+          console.log("Current datastore record:", currentRecord);
+          setCurrentDataStoreRecord(currentRecord);
+          patientId = currentRecord.patient_icn || "Not provided";
+          s3_input = currentRecord.s3_input || "Not provided";
+
+        } else {
+          console.log("Index out of bounds for HealthLakeDatastoresArray");
+          setCurrentDataStoreRecord(undefined);
+          patientId = "Not provided";
+          s3_input = "Not provided";
+        }
+      }
+      
+      async function importToHealthLake(s3_input : string) {
         console.log("Importing to HealthLake... s3_input:", s3_input);
        
         const result = await client.queries.importFHIR({
           id: s3_input,
-          s3_input: s3_input,
-          patient_icn: patientId
         });
       
         console.log("Import FHIR result:", result);
-        setDataStoreID("placeholder");
       }  
   return (
     <div>
       <div>
         <h1>Patient Details</h1>
-        <p><strong>Status:</strong> {HealthLakeDatastore.length > 0 ? HealthLakeDatastore[0].status : "Not found"}</p>
+        <p><strong>Status:</strong> {CurrentDataStoreRecord && CurrentDataStoreRecord.status ? CurrentDataStoreRecord.status : "undefined"}</p>
         <p><strong>Patient ICN:</strong> {patientId}</p>
-        <p><strong>Patient Bucket:</strong> {patientBucket}</p>
-        <p><strong>Patient Opject Key:</strong> {patientObjectKey }</p>
-        <p><strong>HealthLake Data Store ID:</strong> {DataStoreID }</p>
+        <p><strong>Patient S3 Object URL:</strong> {CurrentDataStoreRecord && CurrentDataStoreRecord.s3_input ? CurrentDataStoreRecord.s3_input : "undefined" }</p>
+        <p><strong>HealthLake Data Store ID:</strong> {CurrentDataStoreRecord != undefined && CurrentDataStoreRecord.datastore_id != undefined ? CurrentDataStoreRecord.datastore_id : "undefined"}</p>
         <p><button onClick={() => createDataStore(patientId,s3_input)}>Create Datastore</button></p>
-        <p><button onClick={() => importToHealthLake(patientId,s3_input)}>Import To Healthlake</button></p>
+        <p><button onClick={() => importToHealthLake(s3_input)}>Import To Healthlake</button></p>
         <p><button onClick={() => deleteBucket(patientBucket)}>Delete Bucket</button></p>
       </div>
       <div>    
       <ul>
-        {HealthLakeDatastore.map((HealthLakeDatastore) => (
+        {HealthLakeDatastoresArray.map((HealthLakeDatastore, index) => (
           
           <li 
-          onClick={() => HealthLakeDatastore.id && deleteHealthLakeImport(HealthLakeDatastore.id)}
-          key={HealthLakeDatastore.id}>{HealthLakeDatastore.patient_icn}</li>
+          onClick={() => HealthLakeDatastore.id && setToCurrentDatastoreRecord(index)}
+          key={HealthLakeDatastore.id}>{HealthLakeDatastore.s3_input} {HealthLakeDatastore.status}</li>
         ))}
       </ul>
       </div>

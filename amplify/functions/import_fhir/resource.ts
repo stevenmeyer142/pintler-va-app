@@ -1,4 +1,6 @@
 import { defineFunction } from '@aws-amplify/backend';
+import { Construct } from 'constructs';
+import * as iam from 'aws-cdk-lib/aws-iam';
 
 export const importFHIR = defineFunction({
   // optionally specify a name for the Function (defaults to directory name)
@@ -7,3 +9,22 @@ export const importFHIR = defineFunction({
   entry: './handler.ts',
   timeoutSeconds: 15 * 60, // 15 minutes
 });
+
+export class ImportFHIRConstruct extends Construct {
+  public readonly data_access_role_arn: string;
+  constructor(scope: Construct, id: string) {
+    super(scope, id);
+
+    const role = new iam.Role(this, 'VAHealthLakeImportRole', {
+      assumedBy: new iam.ServicePrincipal('healthlake.amazonaws.com'),
+      description: 'Role for healthlake importing data from S3',
+    });
+
+    role.addToPolicy(new iam.PolicyStatement({
+      actions: ['s3:*'],
+      resources: ['*'],
+    }));
+
+    this.data_access_role_arn = role.roleArn;
+  }
+}

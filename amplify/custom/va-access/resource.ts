@@ -8,11 +8,6 @@ import { Duration } from 'aws-cdk-lib/core';
 import {Key} from 'aws-cdk-lib/aws-kms';
 
 
-export type Message = {
-  subject: string;
-  body: string;
-  recipient: string;
-};
 
 export class VAAccessConstruct extends Construct {
   public readonly gateway_url: string;
@@ -20,7 +15,6 @@ export class VAAccessConstruct extends Construct {
   constructor(scope: Construct, id: string) {
     super(scope, id);
 
-    // Create Lambda to publish messages to SNS topic.
     const vetAccessLambda = new lambda.NodejsFunction(this, 'VetAccess', {
       handler: 'lambda_backend.handler',
       code: Code.fromAsset('amplify/custom/va-access/tsc_out'),

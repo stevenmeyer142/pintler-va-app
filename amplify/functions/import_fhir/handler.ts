@@ -1,129 +1,93 @@
-import type { Schema } from '../../data/resource';
+import type { Schema, HealthLakeDatastoreRecord } from '../../data/resource';
 import { Amplify } from 'aws-amplify';
 import { generateClient } from 'aws-amplify/data';
 import outputs from "../../../amplify_outputs.json"
-import {createHealthLakeDataStore, waitDataStoreActive} from './import_fhir_aws_health_lake';
+import { startFHIRImportJob, waitFHIRImportJobComplete } from './import_fhir_aws_health_lake';
 
 Amplify.configure(outputs);
 
 const client = generateClient<Schema>();
 
 export const handler: Schema["importFHIR"]["functionHandler"] = async (event): Promise<string | null> => {
-  const { s3_input, patient_icn } = event.arguments
-  console.log("Calling importFHIR with arguments:", event.arguments);
+  const { id  } = event.arguments
+  console.log("Calling HealthLakeDatastore:", event.arguments);
 
-  if (!s3_input || !patient_icn) {
-    console.error("s3_input and patient_icn are required");
-    return "s3_input and patient_icn are required";
+  if (!id ) {
+    console.error("id is required");
+    return "id is required";
   }
 
   const { data: healthLakeDatastoreResult, errors } = await client.models.HealthLakeDatastore.get({
-    id: s3_input,
+    id: id,
   });
   if (errors) {
     console.error("Error getting healhLake data", errors);
     return errors[0].message;
   }
-  interface HealthLakeDatastore {
-    s3_input: string;
-    id: string;
-    patient_icn: string;
-    name: string;
-    status: string;
-  }
-
-  var healthLakeDatastore: HealthLakeDatastore;
-  // var healthLakeDatastore  =
-  // {
-  //   s3_input: "undefinee",
-  //   id: "undefinee",
-  //   patient_icn: "undefinee",
-  //   name: 'test',
-  //   status: 'test',
-  // };
+ 
+  var healthLakeDatastore: HealthLakeDatastoreRecord;
   if (!healthLakeDatastoreResult) {
-    console.log("Creating new healthLake data store");
-    healthLakeDatastore =
-    {
-      s3_input: s3_input,
-      id: s3_input,
-      patient_icn: patient_icn,
-      name: 'test',
-      status: 'test',
-    }
-    {
-      const { errors, data: newData } = await client.models.HealthLakeDatastore.create(healthLakeDatastore);
-      if (errors) {
-        console.error("Error creating data store", errors);
-        return errors[0].message;
-      }
-    }
+    console.error("Error missing DynamoHealthLakeDatastoreRecord with id", id);
+    return JSON.stringify({ success: false, message: `Error missing HealthLakeDatastore with id ${id}`});
   }
   else {
-    console.log("Updating existing healthLake data store");
+    console.log("Found existing DynamoDB healthLake data store record", healthLakeDatastoreResult);
     if (
       !healthLakeDatastoreResult.s3_input ||
       !healthLakeDatastoreResult.id ||
       !healthLakeDatastoreResult.patient_icn ||
       !healthLakeDatastoreResult.name ||
-      !healthLakeDatastoreResult.status
+      !healthLakeDatastoreResult.status ||
+      !healthLakeDatastoreResult.datastore_id
     ) {
-      throw new Error("HealthLakeDatastoreResult contains null values");
+      console.error("HealthLakeDatastoreResult contains null values", healthLakeDatastoreResult);
+      return JSON.stringify({ success: false, message: "HealthLakeDatastoreResult contains null values" });
     }
-    healthLakeDatastore = {
-      s3_input: healthLakeDatastoreResult.s3_input,
-      id: healthLakeDatastoreResult.id,
-      patient_icn: healthLakeDatastoreResult.patient_icn,
-      name: healthLakeDatastoreResult.name,
-      status: healthLakeDatastoreResult.status,
-    };
+    healthLakeDatastore = healthLakeDatastoreResult;
   }
 
-  var dataStoreId;
+  var jobId;
   try {
     console.log("Creating healthLake data store");
-    const response = await createHealthLakeDataStore("Test data store name");
-    dataStoreId = response.DatastoreId;
-    console.log("HealthLake data store created successfully:", response);
-    healthLakeDatastore.status = `Start create of datastore with ID ${dataStoreId}`;
-   const { errors } = await client.models.HealthLakeDatastore.update(healthLakeDatastore);
+    const response = await startFHIRImportJob(
+      "My Import Job",
+      healthLakeDatastore.datastore_id!!,
+      healthLakeDatastore.s3_input!!,
+      healthLakeDatastore.s3_output!!,
+      outputs.custom.kmsKey,
+      outputs.custom.dataAccessRoleArn);
+    jobId = response.JobId;
+    healthLakeDatastore.status = `Starting HealthLake import with job ID ${jobId}`;
+    const { errors } = await client.models.HealthLakeDatastore.update(healthLakeDatastore);
     if (errors) {
       console.error("Error updating data store", errors);
-      return errors[0].message;
-    } 
+      return JSON.stringify({ success: false, message: errors[0].message });
+    }
   }
-  catch (error : any) {
-    console.error("Error creating healthLake data store:", error);
-    return error.toString();
+  catch (error: any) {
+    console.error("Error starting import job:", error);
+    return JSON.stringify({ success: false, message: error.toString()});
   }
   try {
     console.log("Waiting for healthLake data store to become active");
-    if (!dataStoreId) {
-      throw new Error("dataStoreId is undefined");
+    if (!jobId) {
+      throw new Error("jobId is undefined");
     }
-    
-    const status = await waitDataStoreActive(dataStoreId, (status) => {
+
+    const status = await waitFHIRImportJobComplete(healthLakeDatastore.datastore_id!, jobId, (status) => {
       healthLakeDatastore.status = `Waiting for HealthLake data store to become active: data store status: ${status}`;
       client.models.HealthLakeDatastore.update(healthLakeDatastore);
     });
     healthLakeDatastore.status = `Wait finished: data store status:  ${status}`;
-    client.models.HealthLakeDatastore.update(healthLakeDatastore); 
+    client.models.HealthLakeDatastore.update(healthLakeDatastore);
     console.log("HealthLake data store status:", status);
     await new Promise((resolve) => setTimeout(resolve, 2000));
   }
-  catch (error : any) {
+  catch (error: any) {
     console.error("Error waiting for healthLake data active:", error);
     return error.toString();
   }
-  // for (let i = 1; i <= 10; i++) {
-  //   healthLakeDatastore.status = `status ${i}`;
-  //   const { errors } = await client.models.HealthLakeDatastore.update(healthLakeDatastore);
-  //   if (errors) {
-  //     console.error("Error updating data store", errors);
-  //     return errors[0].message;
-  //   }
-  //   await new Promise((resolve) => setTimeout(resolve, 2000));
-  // }
+  
   return "Operation completed successfully";
 
 

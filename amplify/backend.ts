@@ -3,7 +3,7 @@ import { auth } from './auth/resource';
 
 import { data } from './data/resource';
 import { VAAccessConstruct } from './custom/va-access/resource';
-import { importFHIR } from './functions/import_fhir/resource';
+import { importFHIR, ImportFHIRConstruct } from './functions/import_fhir/resource';
 import { createDataStore } from './functions/create_data_store/resource';
 import { deleteBucket } from './functions/delete_bucket/resource';
 import iam from 'aws-cdk-lib/aws-iam';
@@ -84,9 +84,27 @@ const vaAccessConstruct = new VAAccessConstruct(
   'VAAccessConstruct',
 );
 
+const importFHIRConstruct = new ImportFHIRConstruct(
+  backend.createStack('ImportFHIRConstruct'),
+  'ImportFHIRConstruct',
+);
+
+const importFHIRPolicy = new iam.PolicyStatement({
+  sid: "ImportFHIRPolicy",
+  actions: [
+    "healthlake:DescribeFHIRImportJob",
+    "healthlake:StartFHIRImportJob",
+  ],
+  resources: ["*"],
+  effect: iam.Effect.ALLOW,
+});
+importFHIRLambda.addToRolePolicy(importFHIRPolicy);
+
+
 backend.addOutput({
   custom: {
     gatewayURL: vaAccessConstruct.gateway_url,
     kmsKey: vaAccessConstruct.kms_key.keyId,
+    dataAccessRoleArn: importFHIRConstruct.data_access_role_arn,
   },
 });
