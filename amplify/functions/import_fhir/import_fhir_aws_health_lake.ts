@@ -37,21 +37,22 @@ export async function startFHIRImportJob(job_name: string,
  
 export async function waitFHIRImportJobComplete(dataStoreId: string,  importJobID :string, callback?: (status: JobStatus) => void) {
     try {
-        let status: JobStatus = JobStatus.SUBMITTED; // Initial status
-        while (status === JobStatus.IN_PROGRESS) {
+        let status = JobStatus.SUBMITTED as JobStatus; // Initial status
+        while (status === JobStatus.SUBMITTED || status === JobStatus.QUEUED || status === JobStatus.IN_PROGRESS) {
             const response = await healthLakeClientInstance.send(new DescribeFHIRImportJobCommand({
                 DatastoreId: dataStoreId,
                 JobId: importJobID
             }));
+            console.log("FHIR import job response:", response);
             status = response.ImportJobProperties?.JobStatus ?? JobStatus.FAILED; // Get the current status
-            console.log("FHIR import job status:", status);
+            console.log("Current FHIR import job status:", status);
 
             // Invoke the callback with the current status if provided
             if (callback) {
                 callback(status);
             }
 
-            if (status !== JobStatus.IN_PROGRESS) {
+            if (status !== JobStatus.SUBMITTED && status !== JobStatus.QUEUED && status !== JobStatus.IN_PROGRESS) {
                 break;
             }
             await new Promise(resolve => setTimeout(resolve, 5000)); // Wait for 5 seconds before checking again

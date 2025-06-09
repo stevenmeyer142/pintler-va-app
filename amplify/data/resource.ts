@@ -2,11 +2,23 @@ import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
 import { importFHIR } from "../functions/import_fhir/resource"
 import { deleteBucket } from "../functions/delete_bucket/resource"
 import { createDataStore } from "../functions/create_data_store/resource";
+import {s3JsonToNdjson} from "../functions/s3_json_to_ndjson/resource";
 
 
 
 const schema = a
   .schema({
+
+    jsonToNdjson: a
+    .query()
+    .arguments({
+      bucket_name: a.string(),
+      json_file_key: a.string(),
+      ndjson_file_key: a.string(),
+    })
+    .returns(a.string())
+    .authorization(allow => [allow.publicApiKey()])
+    .handler(a.handler.function(s3JsonToNdjson)),
     createDataStore: a
     .query()
     .arguments({
@@ -29,6 +41,7 @@ const schema = a
     .authorization(allow => [allow.publicApiKey()])
     .handler(a.handler.function(importFHIR)),
 
+    
     deleteBucket: a
     .query()
     .arguments({
@@ -37,6 +50,8 @@ const schema = a
     .returns(a.string())
     .authorization(allow => [allow.publicApiKey()])
     .handler(a.handler.function(deleteBucket)),
+
+
 
     HealthLakeDatastore: a.model({
       id: a.string(),

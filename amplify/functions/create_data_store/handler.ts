@@ -28,7 +28,6 @@ export const handler: Schema["createDataStore"]["functionHandler"] = async (even
   }
  
   var healthLakeDatastore: HealthLakeDatastoreRecord;
-
   if (!healthLakeDatastoreResult) {
     console.log("Creating new DynamoDB healthLake data store record");
     healthLakeDatastore =
@@ -40,7 +39,7 @@ export const handler: Schema["createDataStore"]["functionHandler"] = async (even
       name: 'test',
       datastore_id : "Not set",
       status: 'Not set',
-       }
+           }
     {
       const { errors, data: newData } = await client.models.HealthLakeDatastore.create(healthLakeDatastore);
       if (errors) {

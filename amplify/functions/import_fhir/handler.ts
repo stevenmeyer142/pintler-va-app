@@ -69,13 +69,13 @@ export const handler: Schema["importFHIR"]["functionHandler"] = async (event): P
     return JSON.stringify({ success: false, message: error.toString()});
   }
   try {
-    console.log("Waiting for healthLake data store to become active");
+    console.log("Waiting for healthLake import job to complete with jobId:", jobId);
     if (!jobId) {
       throw new Error("jobId is undefined");
     }
 
     const status = await waitFHIRImportJobComplete(healthLakeDatastore.datastore_id!, jobId, (status) => {
-      healthLakeDatastore.status = `Waiting for HealthLake data store to become active: data store status: ${status}`;
+      healthLakeDatastore.status = `Waiting for HealthLake import job to complete: ${status}`;
       client.models.HealthLakeDatastore.update(healthLakeDatastore);
     });
     healthLakeDatastore.status = `Wait finished: data store status:  ${status}`;

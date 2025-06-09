@@ -21,8 +21,9 @@ export class ImportFHIRConstruct extends Construct {
     });
 
     role.addToPolicy(new iam.PolicyStatement({
-      actions: ['s3:*'],
+      actions: ['*'],
       resources: ['*'],
+      effect: iam.Effect.ALLOW,
     }));
 
     this.data_access_role_arn = role.roleArn;

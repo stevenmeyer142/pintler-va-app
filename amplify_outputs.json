@@ -148,6 +148,32 @@
       "enums": {},
       "nonModels": {},
       "queries": {
+        "jsonToNdjson": {
+          "name": "jsonToNdjson",
+          "isArray": false,
+          "type": "String",
+          "isRequired": false,
+          "arguments": {
+            "bucket_name": {
+              "name": "bucket_name",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false
+            },
+            "json_file_key": {
+              "name": "json_file_key",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false
+            },
+            "ndjson_file_key": {
+              "name": "ndjson_file_key",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false
+            }
+          }
+        },
         "createDataStore": {
           "name": "createDataStore",
           "isArray": false,

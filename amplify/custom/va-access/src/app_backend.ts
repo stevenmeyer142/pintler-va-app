@@ -252,9 +252,10 @@ const startApp = async () => {
         .then(async (response: { data: FhirResponse }) => {
           console.log('Patient response', response.data);
           patient_record = JSON.stringify(response.data, null, 2);
-          
+          // convert the patient_record to ndjson format
+          patient_record = patient_record.replace(/},/g, '}\n').replace(/^\[/, '').replace(/\]$/, '').trim();
           try {
-            const opjectKey = 'patient_record';
+            const opjectKey = 'patient_record.json';
           const bucketName = await createBucketAndUploadFile(patient_icn, opjectKey, patient_record, kms_key);
           
           console.log('Created bucket', bucketName);
