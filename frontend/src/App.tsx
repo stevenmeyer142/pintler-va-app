@@ -7,15 +7,17 @@ import outputs from "../../amplify_outputs.json";
 
 import { generateClient } from "aws-amplify/api"
 
-
 Amplify.configure(outputs);
 
 const client = generateClient<Schema>()
 
-
-
-
-async function deleteBucket(bucketName: string) {
+/**
+ * Deletes an S3 bucket and all its contents by invoking the `deleteBucket` query on the backend.
+ * 
+ * @param bucketName - The name of the S3 bucket to delete.
+ * @returns A promise that resolves when the bucket and its contents are deleted.
+ */
+async function deleteS3BucketAndContents(bucketName: string) {
   try {
     console.log(`Deleting bucket "${bucketName}" and objects...`);
     const result = await client.queries.deleteBucket({
@@ -29,8 +31,10 @@ async function deleteBucket(bucketName: string) {
 }
 
 
+/**
+ * Initiates the VA login flow by setting session values and redirecting to the VA authentication endpoint.
+ */
 function goToVA() {
-
   const requestBody = {
     main_location: window.location.href,
     kms_key: outputs.custom.kmsKey,
@@ -59,13 +63,20 @@ function goToVA() {
 }
 
 
-
+/**
+ * The main application component. Handles routing and authentication.
+ * 
+ * @returns The root React component for the application.
+ */
 function App() {
   console.log("App component rendered");
 
   const { signOut } = useAuthenticator();
 
 
+  /**
+   * Navigates to the patient display page with hardcoded patient information for debugging purposes.
+   */
   function debugDisplayPatient() {
 
     const patientId = "5000335";
@@ -76,6 +87,11 @@ function App() {
     window.location.href = `/display_patient?patientId=${patientId}&patientBucket=${patientBucket}&patientObjectKey=${patientJSONObjectKey}`;
   }
 
+  /**
+   * Displays patient details and provides actions for converting, importing, and managing HealthLake data stores.
+   * 
+   * @returns The React component for displaying patient details and HealthLake data store actions.
+   */
   function DisplayPatient() {
     const [HealthLakeDatastoresArray, setHealthLakeDatastoresArray] = useState<Array<Schema["HealthLakeDatastore"]["type"]>>([]);
     const [CurrentDataStoreRecord, setCurrentDataStoreRecord] = useState<Schema["HealthLakeDatastore"]["type"] | undefined>(undefined);
@@ -109,6 +125,13 @@ function App() {
 
     });
 
+    /**
+   * Creates a new HealthLake data store for the specified patient and S3 input.
+   * 
+   * @param patientId - The patient ICN.
+   * @param s3_input - The S3 input URL for the patient's NDJSON file.
+   * @returns A promise that resolves when the data store is created.
+   */
     async function createDataStore(patientId: string, s3_input: string) {
       console.log("Importing to HealthLake... s3_input:", s3_input);
 
@@ -122,8 +145,12 @@ function App() {
       console.log("Create data store result:", result);
     }
 
-    // function to set the current datastore record index with an int 
-
+    /**
+     * Sets the current HealthLake data store record by index.
+     * 
+     * @param index - The index of the data store record to set as current.
+     * @returns A promise that resolves when the current record is set.
+     */
     async function setCurrentDatastoreRecordIndex(index: number) {
       console.log("Setting current datastore record index to:", index);
       if (index >= 0 && index < HealthLakeDatastoresArray.length) {
@@ -140,6 +167,12 @@ function App() {
         s3_input = "Not provided";
       }
     }
+
+    /**
+     * Converts a patient's JSON file in S3 to NDJSON format by invoking the backend query.
+     * 
+     * @returns A promise that resolves when the conversion is complete.
+     */
     async function convertJsonToNdjson() {
       try {
         console.log(`Converting JSON to NDJSON for bucket "${patientBucket}", JSON file "${patientJSONObjectKey}", and NDJSON file "${patientNDJSONObjectKey}"...`);
@@ -157,8 +190,12 @@ function App() {
       }
     }
 
-
-
+    /**
+     * Imports FHIR data from the specified S3 input into HealthLake.
+     * 
+     * @param s3_input - The S3 input URL for the NDJSON file.
+     * @returns A promise that resolves when the import is complete.
+     */
     async function importToHealthLake(s3_input: string) {
       console.log("Importing to HealthLake... s3_input:", s3_input);
 
@@ -179,7 +216,7 @@ function App() {
           <p><button onClick={() => convertJsonToNdjson()}>Convert To NDJSON</button></p>
           <p><button onClick={() => createDataStore(patientId, s3_input)}>Create Datastore</button></p>
           <p><button onClick={() => importToHealthLake(s3_input)}>Import To Healthlake</button></p>
-          <p><button onClick={() => deleteBucket(patientBucket)}>Delete Bucket</button></p>
+          <p><button onClick={() => deleteS3BucketAndContents(patientBucket)}>Delete Bucket</button></p>
         </div>
         <div>
           <ul>
@@ -197,6 +234,11 @@ function App() {
     );
   }
 
+  /**
+   * Displays the main application page with login, debug, and sign out options.
+   * 
+   * @returns The React component for the main page.
+   */
 
   function DisplayMain() {
     console.log("DisplayMain");
@@ -210,16 +252,6 @@ function App() {
       </main>
     );
   }
-
-
-
-
-  // function deleteTodo(id: string) {
-  // //  client.models.Todo.delete({ id })
-  // }
-
-
-
 
   return (
     <Router>

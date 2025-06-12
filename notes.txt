@@ -1,3 +1,4 @@
-Create account for the organization
-call auth directly from react app.
-save HealthLake data in cookie for react app
+remove "amplify/custom/va-access/src/db"
+Clean up "amplify/custom/va-access/src/views"
+Add README to amplify/custom/va-ccess"
+Check JSON results from lambdas
