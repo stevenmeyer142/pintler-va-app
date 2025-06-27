@@ -1,4 +1,5 @@
 remove "amplify/custom/va-access/src/db"
 Clean up "amplify/custom/va-access/src/views"
 Add README to amplify/custom/va-ccess"
+Update the dynamoDB status updates in the functions.
 Check JSON results from lambdas

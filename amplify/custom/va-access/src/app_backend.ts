@@ -311,7 +311,7 @@ const startApp = async () => {
     const patientName = req.query.patientName || "Unknown";
     const patientID = req.query.patientID || "Unknown";
     console.log(`Patient Name: ${patientName}, Patient ID: ${patientID}`);
-    const redirectUrl = `${main_location}/display_patient?patientName=${patientName}&patientID=${patientID}`;
+    const redirectUrl = `${main_location}/patient_import?patientName=${patientName}&patientID=${patientID}`;
  
     res.redirect(redirectUrl);
   });
