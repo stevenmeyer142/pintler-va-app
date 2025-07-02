@@ -1,6 +1,6 @@
 import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
 import { importFHIR } from "../functions/import_fhir/resource"
-import { deleteBucket } from "../functions/delete_bucket/resource"
+import { deleteBucket } from "../functions/delete_datastore/resource"
 import { createDataStore } from "../functions/create_data_store/resource";
 import {s3JsonToNdjson} from "../functions/s3_json_to_ndjson/resource";
 import { S3_CREATE_DEFAULT_LOGGING_POLICY } from "aws-cdk-lib/cx-api";
@@ -77,6 +77,7 @@ export const HEALTHLAKE_DATASTORE_STATUS = {
   CREATE_COMPLETED: 'CREATE_COMPLETED',
   CREATING_FAILED: 'CREATING_FAILED',
   IMPORTING: 'IMPORTING',
+  IMPORT_COMPLETED: 'IMPORT_COMPLETED',
   IMPORT_FAILED: 'IMPORT_FAILED',
   DELETING: 'DELETING',
   DELETE_COMPLETED: 'DELETE_COMPLETED',
@@ -96,6 +97,11 @@ export interface HealthLakeDatastoreRecord {
   s3_output: Nullable<string>;
   datastore_id: Nullable<string>;
 } 
+
+export interface FunctionResponse {
+  success: boolean;
+  message: string;
+}
   
 export type Schema = ClientSchema<typeof schema>;
 

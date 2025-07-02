@@ -1,4 +1,5 @@
-import type { Schema, HealthLakeDatastoreRecord } from '../../data/resource';
+import type { Schema, HealthLakeDatastoreRecord, FunctionResponse } from '../../data/resource';
+import { HEALTHLAKE_DATASTORE_STATUS } from "../../data/resource"
 import { Amplify } from 'aws-amplify';
 import { generateClient } from 'aws-amplify/data';
 import outputs from "../../../amplify_outputs.json"
@@ -8,13 +9,30 @@ Amplify.configure(outputs);
 
 const client = generateClient<Schema>();
 
+async function updateHealthLakeDatastoreStatus(id: string | undefined, status: string, description: string): Promise<FunctionResponse> {
+  if (!id) {
+    console.error("id is required to update healthLake datastore status");
+    return { success: false, message: "Error id is required for updateHealthLakeDatastoreStatus" };
+  }
+  const { data, errors } = await client.models.HealthLakeDatastore.update({
+    id: id,
+    status: status,
+    status_description: description,
+  });
+  if (errors) {
+    console.error("Error updating healthLake datastore status", errors);
+    return { success: false, message: errors[0].message };
+  }
+  return { success: true, message: "" };
+}
+
 export const handler: Schema["importFHIR"]["functionHandler"] = async (event): Promise<string | null> => {
   const { id  } = event.arguments
   console.log("Calling HealthLakeDatastore:", event.arguments);
 
   if (!id ) {
     console.error("id is required");
-    return "id is required";
+    return JSON.stringify({ success: false, message: "id is required" });
   }
 
   const { data: healthLakeDatastoreResult, errors } = await client.models.HealthLakeDatastore.get({
@@ -22,7 +40,7 @@ export const handler: Schema["importFHIR"]["functionHandler"] = async (event): P
   });
   if (errors) {
     console.error("Error getting healhLake data", errors);
-    return errors[0].message;
+    return JSON.stringify({ success: false, message: errors[0].message });
   }
  
   var healthLakeDatastore: HealthLakeDatastoreRecord;
@@ -48,7 +66,7 @@ export const handler: Schema["importFHIR"]["functionHandler"] = async (event): P
 
   var jobId;
   try {
-    console.log("Creating healthLake data store");
+    console.log("Starting HealthLake import job for datastore:", healthLakeDatastore.datastore_id);
     const response = await startFHIRImportJob(
       "My Import Job",
       healthLakeDatastore.datastore_id!!,
@@ -60,7 +78,7 @@ export const handler: Schema["importFHIR"]["functionHandler"] = async (event): P
     healthLakeDatastore.status = `Starting HealthLake import with job ID ${jobId}`;
     const { errors } = await client.models.HealthLakeDatastore.update(healthLakeDatastore);
     if (errors) {
-      console.error("Error updating data store", errors);
+      console.error("Error updating data store record", errors);
       return JSON.stringify({ success: false, message: errors[0].message });
     }
   }
@@ -75,20 +93,22 @@ export const handler: Schema["importFHIR"]["functionHandler"] = async (event): P
     }
 
     const status = await waitFHIRImportJobComplete(healthLakeDatastore.datastore_id!, jobId, (status) => {
-      healthLakeDatastore.status = `Waiting for HealthLake import job to complete: ${status}`;
-      client.models.HealthLakeDatastore.update(healthLakeDatastore);
+            updateHealthLakeDatastoreStatus(id ?? undefined, HEALTHLAKE_DATASTORE_STATUS.IMPORTING,
+              `Waiting for HealthLake import job to complete: ${status}`);
+      
+
     });
-    healthLakeDatastore.status = `Wait finished: data store status:  ${status}`;
-    client.models.HealthLakeDatastore.update(healthLakeDatastore);
-    console.log("HealthLake data store status:", status);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+        updateHealthLakeDatastoreStatus(id ?? undefined, HEALTHLAKE_DATASTORE_STATUS.IMPORT_COMPLETED,
+          `Wait for import: import status:  ${status}`);
+    
+    console.log("HealthLake import status:", status);
   }
   catch (error: any) {
-    console.error("Error waiting for healthLake data active:", error);
-    return error.toString();
+    console.error("Error waiting for import job to complete:", error);
+    return JSON.stringify({ success: false, message: error.toString() });
   }
   
-  return "Operation completed successfully";
+  return JSON.stringify({ success: true, message: "Successfully completed FHIR import job", jobId });
 
 
 

@@ -1,4 +1,4 @@
-require('dotenv').config(); // This is probably not needed.
+require('dotenv').config(); // TODO: This is probably not needed.
 import axios from 'axios';
 import express, { Request, Response, NextFunction } from "express";
 import 'os';
@@ -27,7 +27,6 @@ declare module 'express-session' {
 import passport from 'passport';
 import OAuth2Strategy from 'passport-oauth2';
 import https from 'https';
-//import sqlite3 from 'sqlite3';
 import bodyParser from 'body-parser';
 
 
@@ -94,14 +93,12 @@ class Row {
 }
 
 const configurePassport = () => {
-  //const scope="profile openid offline_access claim.read claim.write";
+
   passport.serializeUser((user: Express.User, done) => {
-    //   console.log('serializeUser', user);
     done(null, user);
   });
 
   passport.deserializeUser((user: Express.User, done) => {
-    //   console.log('deserializeUser', user);
     done(null, user);
   });
 
@@ -163,15 +160,7 @@ const loggedIn = (req: Request) => {
 const app = express();
 
 const startApp = async () => {
-
-  //  const port = 8081;
   const secret = 'My Super Secret Secret'
-  // let db = new sqlite3.Database('./db/lighthouse.sqlite', (err) => {
-  //   if (err) {
-  //     return console.error(err.message);
-  //   }
-  //   console.log('Connected to SQlite database.');
-  // });
 
   app.set('view engine', 'ejs')
   app.use(require('express-session')({ secret: 'keyboard cat', resave: true, saveUninitialized: true }));
@@ -180,15 +169,14 @@ const startApp = async () => {
   app.use(session({ secret, cookie: { maxAge: 60000 }, resave: true, saveUninitialized: true }));
   app.use(bodyParser.json()); // support json encoded bodies
   app.use(bodyParser.urlencoded({ extended: true }));
- 
- // app.use(cors);
+
 
   app.post('/', (req: Request, res) => {
     const has_token = req.session.user?.accessToken !== undefined;
 
     const url = `https://${environment.env}-api.va.gov/oauth2/claims/${environment.version}/authorization?clientID=${environment.clientID}&nonce=${environment.nonce}&redirect_uri=${environment.redirect_uri}&response_type=code&scope=${environment.scope}&state=1589217940`;
 
-    //console.log("\nAuthorization url ", url, "\n");
+    // TODO: why are these the same for if and else?
     if (req.session && req.session.user) {
       res.render('index', { has_token: has_token, autherizeLink: url })
     } else {
@@ -198,18 +186,9 @@ const startApp = async () => {
 
   
   app.get('/home', (req: Request, res: Response) => {
-    //  console.log('home req.session.user', req.session.user);
+
     if (req.session && req.session.user) {
       const has_token = req.session.user?.accessToken !== undefined;
-      // db.all(sql, [], (err:NodeJS.ErrnoException, rows:[Row]) => {
-      //   if (err) {
-      //     throw err;
-      //   }
-      //   rows.forEach((row) => {
-      //     users.push(row)
-      //   });
-      //   res.render('home', { has_token, users });
-      // });
 
       res.render('home', { has_token, patient_record });
 
@@ -252,8 +231,6 @@ const startApp = async () => {
         .then(async (response: { data: FhirResponse }) => {
           console.log('Patient response', response.data);
           patient_record = JSON.stringify(response.data, null, 2);
-          // convert the patient_record to ndjson format
-          patient_record = patient_record.replace(/},/g, '}\n').replace(/^\[/, '').replace(/\]$/, '').trim();
           try {
             const opjectKey = 'patient_record.json';
           const bucketName = await createBucketAndUploadFile(patient_icn, opjectKey, patient_record, kms_key);
@@ -306,31 +283,15 @@ const startApp = async () => {
   app.get('/auth/cb', wrapAuth);
 
   
-  app.get('/return_toapp', (req, res) => {
-    console.log('return_toapp endpoint hit main_location', main_location);
-    const patientName = req.query.patientName || "Unknown";
-    const patientID = req.query.patientID || "Unknown";
-    console.log(`Patient Name: ${patientName}, Patient ID: ${patientID}`);
-    const redirectUrl = `${main_location}/patient_import?patientName=${patientName}&patientID=${patientID}`;
+  // app.get('/return_toapp', (req, res) => {
+  //   console.log('return_toapp endpoint hit main_location', main_location);
+  //   const patientName = req.query.patientName || "Unknown";
+  //   const patientID = req.query.patientID || "Unknown";
+  //   console.log(`Patient Name: ${patientName}, Patient ID: ${patientID}`);
+  //   const redirectUrl = `${main_location}/patient_import?patientName=${patientName}&patientID=${patientID}`;
  
-    res.redirect(redirectUrl);
-  });
-
-  app.get('/', async (req: Request, res) => {
-    const has_token = req.session.user?.accessToken !== undefined;
-
-    // TODO: is the autherization link correct?
-    const url = `https://${environment.env}-api.va.gov/oauth2/claims/${environment.version}/authorization?clientID=${environment.clientID}&nonce=${environment.nonce}&redirect_uri=${environment.redirect_uri}&response_type=code&scope=${environment.scope}&state=1589217940`;
-
-    //console.log("\nAuthorization url ", url, "\n");
-    if (req.session && req.session.user) {
-      res.render('index', { has_token: has_token, autherizeLink: url })
-    } else {
-      res.render('index', { has_token: has_token, autherizeLink: url })
-    }
-  });
-
-  //  app.listen(port, () => console.log(`Example app listening on port ${port}!`));
+  //   res.redirect(redirectUrl);
+  // });
 }
 
 (async () => {

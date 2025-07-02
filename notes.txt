@@ -1,5 +1,8 @@
 remove "amplify/custom/va-access/src/db"
 Clean up "amplify/custom/va-access/src/views"
-Add README to amplify/custom/va-ccess"
+Clean up "amplify/custom/va-access/src/app_backend.ts"
+Add README to amplify/custom/va-access"
 Update the dynamoDB status updates in the functions.
 Check JSON results from lambdas
+Rename page for react app.
+Rename custom server page.

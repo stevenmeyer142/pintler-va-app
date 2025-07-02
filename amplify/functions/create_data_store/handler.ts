@@ -1,4 +1,4 @@
-import type { Schema, HealthLakeDatastoreRecord } from '../../data/resource';
+import type { Schema, HealthLakeDatastoreRecord, FunctionResponse } from '../../data/resource';
 import { HEALTHLAKE_DATASTORE_STATUS } from "../../data/resource"
 import { Amplify } from 'aws-amplify';
 import { generateClient } from 'aws-amplify/data';
@@ -8,10 +8,6 @@ import { createHealthLakeDataStore, waitDataStoreActive } from './create_datasto
 Amplify.configure(outputs);
 
 const client = generateClient<Schema>();
-interface FunctionResponse {
-  success: boolean;
-  message: string;
-}
 
 
 async function updateHealthLakeDatastoreStatus(id: string | undefined, status: string, description: string): Promise<FunctionResponse> {
@@ -94,7 +90,7 @@ export const handler: Schema["createDataStore"]["functionHandler"] = async (even
       console.error("Error updating data store", errors);
     }
     console.error("Error creating healthLake data store:", error);
-    return JSON.
+    return JSON.stringify({ success: false, message: error.toString() });
   }
   try {
     console.log("Waiting for healthLake data store to become active");
@@ -118,5 +114,5 @@ export const handler: Schema["createDataStore"]["functionHandler"] = async (even
     return JSON.stringify({ success: false, message: error.toString() });
   }
 
-  return JSON.stringify({ success: true, message: "Successs", dataStoreId: dataStoreId });
+  return JSON.stringify({ success: true, message: "", dataStoreId: dataStoreId });
 }

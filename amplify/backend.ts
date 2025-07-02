@@ -5,7 +5,7 @@ import { data } from './data/resource';
 import { VAAccessConstruct } from './custom/va-access/resource';
 import { importFHIR, ImportFHIRConstruct } from './functions/import_fhir/resource';
 import { createDataStore } from './functions/create_data_store/resource';
-import { deleteBucket } from './functions/delete_bucket/resource';
+import { deleteBucket } from './functions/delete_datastore/resource';
 import iam from 'aws-cdk-lib/aws-iam';
 import { s3JsonToNdjson } from './functions/s3_json_to_ndjson/resource';
 

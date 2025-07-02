@@ -10,13 +10,13 @@ export const handler: Schema["deleteBucket"]["functionHandler"] = async (event: 
     console.log("Calling deleteBucket with arguments:", event.arguments);
     if (!bucket_name) {
       console.error("bucket_name is required");
-      return "bucket_name is required";
+      return JSON.stringify({ success: false, message: "bucket_name is required" });
     }
     await deleteBucketAndObjects(bucket_name);
-    return `Bucket ${bucket_name} deleted successfully`;
+    return JSON.stringify({ success: true, message: `Bucket ${bucket_name} deleted successfully` });
   }
-  catch (error) {
+  catch (error: any) {
     console.error("Error deleting bucket:", error);
-    return `Error deleting bucket: ${error}`;
+    return JSON.stringify({ success: false, message: `Error deleting bucket: ${error.message}` });
   }
 }
