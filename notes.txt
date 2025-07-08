@@ -6,3 +6,4 @@ Update the dynamoDB status updates in the functions.
 Check JSON results from lambdas
 Rename page for react app.
 Rename custom server page.
+Document use of "amplify/custom/va-access/build.sh"

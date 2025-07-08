@@ -60,13 +60,6 @@
               "isRequired": false,
               "attributes": []
             },
-            "status_description": {
-              "name": "status_description",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
             "patient_icn": {
               "name": "patient_icn",
               "isArray": false,
@@ -90,6 +83,13 @@
             },
             "datastore_id": {
               "name": "datastore_id",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "status_description": {
+              "name": "status_description",
               "isArray": false,
               "type": "String",
               "isRequired": false,

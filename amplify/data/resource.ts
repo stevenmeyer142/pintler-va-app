@@ -3,7 +3,6 @@ import { importFHIR } from "../functions/import_fhir/resource"
 import { deleteBucket } from "../functions/delete_datastore/resource"
 import { createDataStore } from "../functions/create_data_store/resource";
 import {s3JsonToNdjson} from "../functions/s3_json_to_ndjson/resource";
-import { S3_CREATE_DEFAULT_LOGGING_POLICY } from "aws-cdk-lib/cx-api";
 
 
 
@@ -58,11 +57,11 @@ const schema = a
       id: a.string(),
       name: a.string(),
       status: a.string(),
-      status_description: a.string(),
       patient_icn: a.string(),
       s3_input: a.string(),
       s3_output: a.string(),
       datastore_id: a.string(),
+      status_description: a.string(),
     })
     .authorization(allow => [allow.publicApiKey()]),
       
@@ -101,7 +100,7 @@ export interface HealthLakeDatastoreRecord {
 export interface FunctionResponse {
   success: boolean;
   message: string;
-}
+} 
   
 export type Schema = ClientSchema<typeof schema>;
 
