@@ -12,9 +12,8 @@
 
 import { useEffect, useState } from "react";
 import { useAuthenticator } from '@aws-amplify/ui-react';
-import { BrowserRouter as Router, Route, Routes, useSearchParams } from "react-router-dom";
-import type { Schema, HealthLakeDatastoreRecord } from "../../amplify/data/resource"
-import { HEALTHLAKE_DATASTORE_STATUS, HEALTHLAKE_DATASTORE_STATUS_INITIALIZED } from "../../amplify/data/resource"
+import { BrowserRouter as Router, Route, Routes} from "react-router-dom";
+import type { Schema} from "../../amplify/data/resource"
 import {CreateDataStorePage} from "./CreateDataStore"
 import { Amplify } from "aws-amplify";
 import outputs from "../../amplify_outputs.json";

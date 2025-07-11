@@ -25,7 +25,6 @@ const schema = a
       id: a.string(),
       name: a.string(),
       s3_input: a.string(),
-      s3_output: a.string(),
       patient_icn: a.string(),
     })
     .returns(a.string())
@@ -69,20 +68,6 @@ const schema = a
 )
 .authorization(allow => [allow.resource(importFHIR)]);
 
-// Exported string constants for HealthLakeDatastore status.
-export const HEALTHLAKE_DATASTORE_STATUS = {
-  INITIALIZED: 'INITIALIZED',
-  CREATING: 'CREATING',
-  CREATE_COMPLETED: 'CREATE_COMPLETED',
-  CREATING_FAILED: 'CREATING_FAILED',
-  IMPORTING: 'IMPORTING',
-  IMPORT_COMPLETED: 'IMPORT_COMPLETED',
-  IMPORT_FAILED: 'IMPORT_FAILED',
-  DELETING: 'DELETING',
-  DELETE_COMPLETED: 'DELETE_COMPLETED',
-  DELETE_FAILED: 'DELETE_FAILED',
-} as const;
-
 
 // Interface that matches the HealthLakeDatastore model.
  type Nullable<T> = T | null;
@@ -101,6 +86,7 @@ export interface FunctionResponse {
   success: boolean;
   message: string;
 } 
+
   
 export type Schema = ClientSchema<typeof schema>;
 

@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import type { Schema, HealthLakeDatastoreRecord } from "../../amplify/data/resource"
+import type { Schema, HealthLakeDatastoreRecord, FunctionResponse } from "../../amplify/data/resource"
+import { parseFunctionResultJson, updateHealthLakeDatastoreStatus } from "./UtilityFunctions";
 import { useSearchParams } from "react-router-dom";
 import { Amplify } from "aws-amplify";
 import outputs from "../../amplify_outputs.json";
 
 import { generateClient } from "aws-amplify/api"
+
 
 Amplify.configure(outputs);
 
@@ -22,7 +24,7 @@ async function convertJsonToNdjson(
   patientBucket: string,
   patientJSONObjectKey: string,
   patientNDJSONObjectKey: string
-) {
+) : Promise<FunctionResponse> {
   try {
     console.log(`Converting JSON to NDJSON for bucket "${patientBucket}", JSON file "${patientJSONObjectKey}", and NDJSON file "${patientNDJSONObjectKey}"...`);
     const result = await client.queries.jsonToNdjson({
@@ -31,11 +33,19 @@ async function convertJsonToNdjson(
       ndjson_file_key: patientNDJSONObjectKey,
     });
 
+    const jsonResult = parseFunctionResultJson(result.data ?? "{success: false, message: 'No data returned'}");
+    if (!jsonResult.success) {
+      console.error("Failed to convert JSON to NDJSON:", jsonResult.message);
+      return { success: false, message: jsonResult.message };
+    }
+
     // TODO: check result in result.success
     console.log("Conversion result:", result);
-
-  } catch (error) {
+    return { success: true, message: "JSON converted to NDJSON successfully." };
+    
+  } catch (error : any) {
     console.error("Error converting JSON to NDJSON:", error);
+    return { success: false, message: `Error converting JSON to NDJSON: ${error.message}` };
   }
 }
 
@@ -46,9 +56,10 @@ async function convertJsonToNdjson(
 * @param s3_input - The S3 input URL for the patient's NDJSON file.
 * @returns A promise that resolves when the data store is created.
 */
-async function createDataStore(patientId: string, s3_input: string) {
+async function createDataStore(patientId: string, s3_input: string)  : Promise<FunctionResponse> {
   console.log("Creating HealthLake data store... s3_input:", s3_input);
 
+  try {
   const result = await client.queries.createDataStore({
     id: s3_input,
     name: "test",
@@ -56,7 +67,19 @@ async function createDataStore(patientId: string, s3_input: string) {
     patient_icn: patientId,
   });
 
+  const jsonResult = parseFunctionResultJson(result.data ?? "{success: false, message: 'No data returned'}");
+    if (!jsonResult.success) {
+      console.error("Failed to convert createDataStore:", jsonResult.message, "function result:", result);
+      return { success: false, message: jsonResult.message };
+    }
+
   console.log("Create data store result:", result);
+  updateHealthLakeDatastoreStatus
+  return { success: true, message: "HealthLake data store created successfully." };
+  } catch (error : any) {
+    console.error("Error creating HealthLake data store:", error);
+    return { success: false, message: `Error creating HealthLake data store: ${error.message}` };
+  }
 }
 
 
@@ -92,14 +115,20 @@ async function createDataStoreAndConvertNdJSON(
     console.error("Patient ID, S3 input, or bucket information is missing.");
     return;
   }
-  await createDataStore(patientId, s3_input);
-  await convertJsonToNdjson(patientBucket, patientJSONObjectKey, patientNDJSONObjectKey);
+ // await convertJsonToNdjson(patientBucket, patientJSONObjectKey, patientNDJSONObjectKey);
+  const result = await createDataStore(patientId, s3_input);
+
+}
+
+function ReturnToPatientsPage() {
+  console.log("Returning to Patients Page");
+  window.location.href = "/";
 }
 
 export function CreateDataStorePage() {
   console.log("CreateDataStorePage component rendered");
   const [CurrentDataStoreRecord, setCurrentDataStoreRecord] = useState<Schema["HealthLakeDatastore"]["type"] | undefined>(undefined);
-   const [searchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
 
   var patientId = searchParams.get("patientId") || "Not provided";
   const patientBucket = searchParams.get("patientBucket") || undefined;
@@ -114,8 +143,9 @@ export function CreateDataStorePage() {
 
   const patientNDJSONObjectKey = patientJSONObjectKey.replace(".json", ".ndjson");
   const s3_input = `s3://${patientBucket}/${patientNDJSONObjectKey}`;
-  // Generate a unique health_record_id using crypto.randomUUID()
-  const health_record_id = crypto.randomUUID();
+  const health_record_id = s3_input; 
+``
+  
   console.log("S3 input:", s3_input);
  // setInitialId(s3_input);
     
@@ -132,15 +162,16 @@ export function CreateDataStorePage() {
         patient_icn: String(patientId),
         name: 'test',
         datastore_id: null,
-        status: "",
+        status: "Initialized",
         status_description: "Data store initialized, ready for creation",
       };
       try {
-       await client.models.HealthLakeDatastore.create(healthLakeDatastore).then(async ({ errors }) => {
+       client.models.HealthLakeDatastore.create(healthLakeDatastore).then(async ({ errors }) => {
         if (errors) {
           console.error("Error creating DynamoDB data store record", errors);
         }
         else {
+          console.log("DynamoDB data store record created successfully:", healthLakeDatastore);
           if (
             typeof patientId === "string" &&
             typeof s3_input === "string" &&
@@ -165,25 +196,25 @@ export function CreateDataStorePage() {
 
 
 
-  // useEffect(() => {
-  //   client.models.HealthLakeDatastore.observeQuery({
-  //     filter: {
-  //       id: { eq: health_record_id }
-  //     }
-  //   }).subscribe({
+  useEffect(() => {
+    client.models.HealthLakeDatastore.observeQuery({
+      filter: {
+        id: { eq: health_record_id }
+      }
+    }).subscribe({
 
-  //     next: (data) => {
-  //       if (data.items.length > 0) {
-  //         setCurrentDataStoreRecord(data.items[0]);
-  //       }
-  //       else {
-  //         console.warn("No HealthLake Datastore record found for the provided health_record_id.");
-  //         setCurrentDataStoreRecord(undefined)
-  //       }
-  //     },
-  //   });
+      next: (data) => {
+        if (data.items.length > 0) {
+          setCurrentDataStoreRecord(data.items[0]);
+        }
+        else {
+          console.warn("No HealthLake Datastore record found for the provided health_record_id.");
+          setCurrentDataStoreRecord(undefined)
+        }
+      },
+    });
 
-  // }, []);
+  }, []);
 
   return (
     <div>
@@ -193,6 +224,9 @@ export function CreateDataStorePage() {
         <p><strong>Patient ICN:</strong> {patientId}</p>
         <p><strong>Patient S3 Object URL:</strong> {CurrentDataStoreRecord && CurrentDataStoreRecord.s3_input ? CurrentDataStoreRecord.s3_input : "undefined"}</p>
         <p><strong>HealthLake Data Store ID:</strong> {CurrentDataStoreRecord != undefined && CurrentDataStoreRecord.datastore_id != undefined ? CurrentDataStoreRecord.datastore_id : "undefined"}</p>
+        <div style={{ margin: "10px 0" }}></div>
+        <button onClick={ReturnToPatientsPage}>Patients Page</button>      
+ 
       </div>
     </div>
   );

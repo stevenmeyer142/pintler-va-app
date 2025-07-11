@@ -1,5 +1,5 @@
 import type { Schema, HealthLakeDatastoreRecord, FunctionResponse } from '../../data/resource';
-import { HEALTHLAKE_DATASTORE_STATUS } from "../../data/resource"
+
 import { Amplify } from 'aws-amplify';
 import { generateClient } from 'aws-amplify/data';
 import outputs from "../../../amplify_outputs.json"
@@ -93,12 +93,12 @@ export const handler: Schema["importFHIR"]["functionHandler"] = async (event): P
     }
 
     const status = await waitFHIRImportJobComplete(healthLakeDatastore.datastore_id!, jobId, (status) => {
-            updateHealthLakeDatastoreStatus(id ?? undefined, HEALTHLAKE_DATASTORE_STATUS.IMPORTING,
+            updateHealthLakeDatastoreStatus(id ?? undefined, "IMPORTING",
               `Waiting for HealthLake import job to complete: ${status}`);
       
 
     });
-        updateHealthLakeDatastoreStatus(id ?? undefined, HEALTHLAKE_DATASTORE_STATUS.IMPORT_COMPLETED,
+        updateHealthLakeDatastoreStatus(id ?? undefined, "IMPORT_COMPLETE",
           `Wait for import: import status:  ${status}`);
     
     console.log("HealthLake import status:", status);

@@ -205,12 +205,6 @@
               "type": "String",
               "isRequired": false
             },
-            "s3_output": {
-              "name": "s3_output",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false
-            },
             "patient_icn": {
               "name": "patient_icn",
               "isArray": false,

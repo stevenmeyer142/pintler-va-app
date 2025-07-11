@@ -33,7 +33,7 @@ const createDataStoreLambda = backend.createDataStore.resources.lambda;
 //   resources: ["*"],
 //   effect: iam.Effect.ALLOW,
 // })
-const statement1 = new iam.PolicyStatement({
+const healthLakeActionsPolicy = new iam.PolicyStatement({
   sid: "AllowImportFHIR",
   actions: ["healthlake:*",
           "s3:*",
@@ -67,7 +67,7 @@ const adminAccess = new iam.PolicyStatement({
 })
 
 
-createDataStoreLambda.addToRolePolicy(statement1);
+createDataStoreLambda.addToRolePolicy(healthLakeActionsPolicy);
 // importFHIRLambda.addToRolePolicy(statement2)
 //importFHIRLambda.addToRolePolicy(adminAccess)
 
