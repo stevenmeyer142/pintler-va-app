@@ -147,9 +147,7 @@ async function importToHealthLake(s3_input: string) {
  * @returns The root React component for the application.
  */
 function App() {
-  console.log("App component rendered");
-
-  const { signOut } = useAuthenticator();
+    const { signOut } = useAuthenticator();
 
 
   /**
@@ -174,7 +172,6 @@ function App() {
    */
 
   function DisplayPatient() {
-    console.log("DisplayPatient component rendered");
     const [HealthLakeDatastoresArray, setHealthLakeDatastoresArray] = useState<Array<Schema["HealthLakeDatastore"]["type"]>>([]);
     const [CurrentDataStoreRecord, setCurrentDataStoreRecord] = useState<Schema["HealthLakeDatastore"]["type"] | undefined>(undefined);
     // const [InitialId, setInitialId] = useState<string | undefined>(undefined);
@@ -199,7 +196,7 @@ function App() {
     // // Start HealthDatastore creation when this page is initially loaded. Not when it is updated.
     // // This is to prevent the datastore from being created multiple times when the page is reloaded
     // // or when the component is re-rendered.
-       console.log("Document referrer:", document.referrer);
+
   //  if (InitialId === undefined) {
   //   useEffect(() => { 
   //        console.log("Creating new DynamoDB healthLake data store record");

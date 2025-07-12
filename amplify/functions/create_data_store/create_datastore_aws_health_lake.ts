@@ -18,7 +18,7 @@ export const createHealthLakeDataStore = async (dataStoreName: string) => {
     }
 }
 
-export const waitDataStoreActive = async (dataStoreId: string, callback: (status: DatastoreStatus) => void) => {
+export const waitDataStoreActive = async (dataStoreId: string, callback: (status: DatastoreStatus) => void) : Promise<boolean> => {
     try {
         let status: DatastoreStatus = DatastoreStatus.CREATING; // Initial status
         while (status === DatastoreStatus.CREATING) {
@@ -37,7 +37,7 @@ export const waitDataStoreActive = async (dataStoreId: string, callback: (status
             }
             await new Promise(resolve => setTimeout(resolve, 5000)); // Wait for 5 seconds before checking again
         }
-        return status; // Return the final status
+        return status == DatastoreStatus.ACTIVE; 
     } catch (error) {
         console.error("Error waiting for data store to become active:", error);
         throw error; // Re-throw the error for the caller to handle
