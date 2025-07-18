@@ -36,17 +36,23 @@ export async function updateHealthLakeDatastoreStatus(id: string | undefined, st
 }
 
 
-export function parseFunctionResultJson(jsonString: string): any {
+export function parseFunctionResultJson(jsonString: any): any {
   try {
     const parsed = JSON.parse(jsonString);
     if (typeof parsed.success === "boolean" && typeof parsed.message === "string") {
       return parsed;
     } else {
-      console.error("JSON does not match FunctionResponse structure in'parseFunctionResultJson'.");
+      console.error("JSON does not match FunctionResponse structure in'parseFunctionResultJson' with input ", jsonString,
+        "with typeof",typeof jsonString, "and parsed", parsed);
+      
       return { success: false, message: "JSON does not match FunctionResponse structure." };
     }
   } catch (error) {
     console.error("Failed to parse JSON in 'parseFunctionResultJson':", error, "Input JSON string:", jsonString);
+    if (typeof jsonString === "object" && jsonString.errors && jsonString.errors.length > 0) {
+      console.error("Errors found in JSON:", jsonString.errors);
+      return { success: false, message: jsonString.errors[0] };
+    }
     return { success: false, message: `Failed to parse JSON: ${(error as Error).message}` };
   }
 }

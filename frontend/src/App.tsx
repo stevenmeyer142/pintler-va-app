@@ -15,6 +15,7 @@ import { useAuthenticator } from '@aws-amplify/ui-react';
 import { BrowserRouter as Router, Route, Routes} from "react-router-dom";
 import type { Schema} from "../../amplify/data/resource"
 import {CreateDataStorePage} from "./CreateDataStore"
+import { ImportToDataStorePage } from "./ImportToDataStore";
 import { Amplify } from "aws-amplify";
 import outputs from "../../amplify_outputs.json";
 
@@ -74,71 +75,6 @@ function goToVA() {
 
 
 }
-/**
- * Converts a patient's JSON file in S3 to NDJSON format by invoking the backend query.
- * 
- * @param patientBucket - The name of the S3 bucket containing the patient's JSON file.
- * @param patientJSONObjectKey - The key of the JSON file in the S3 bucket.
- * @param patientNDJSONObjectKey - The key for the output NDJSON file in the S3 bucket.
- * @returns A promise that resolves when the conversion is complete.
- */
-async function convertJsonToNdjson(
-  patientBucket: string,
-  patientJSONObjectKey: string,
-  patientNDJSONObjectKey: string
-) {
-  try {
-    console.log(`Converting JSON to NDJSON for bucket "${patientBucket}", JSON file "${patientJSONObjectKey}", and NDJSON file "${patientNDJSONObjectKey}"...`);
-    const result = await client.queries.jsonToNdjson({
-      bucket_name: patientBucket,
-      json_file_key: patientJSONObjectKey,
-      ndjson_file_key: patientNDJSONObjectKey,
-    });
-
-    // TODO: check result in result.success
-    console.log("Conversion result:", result);
-
-  } catch (error) {
-    console.error("Error converting JSON to NDJSON:", error);
-  }
-}
-
-/**
-* Creates a new HealthLake data store for the specified patient and S3 input.
-* 
-* @param patientId - The patient ICN.
-* @param s3_input - The S3 input URL for the patient's NDJSON file.
-* @returns A promise that resolves when the data store is created.
-*/
-async function createDataStore(patientId: string, s3_input: string) {
-  console.log("Importing to HealthLake... s3_input:", s3_input);
-
-  const result = await client.queries.createDataStore({
-    id: s3_input,
-    name: "test",
-    s3_input: s3_input,
-    patient_icn: patientId,
-  });
-
-  console.log("Create data store result:", result);
-}
-
-
-/**
- * Imports FHIR data from the specified S3 input into HealthLake.
- * 
- * @param s3_input - The S3 input URL for the NDJSON file.
- * @returns A promise that resolves when the import is complete.
- */
-async function importToHealthLake(s3_input: string) {
-  console.log("Importing to HealthLake... s3_input:", s3_input);
-
-  const result = await client.queries.importFHIR({
-    id: s3_input,
-  });
-
-  console.log("Import FHIR result:", result);
-}
 
 
 /**
@@ -190,7 +126,7 @@ function App() {
     // // }
 
     // // const patientNDJSONObjectKey = patientJSONObjectKey.replace(".json", ".ndjson");
-    var s3_input = `Not provided`;
+  
     // // const [LastImportedDataStoreID, setLastImportedDataStoreID] = useState<string | undefined>(undefined);
 
     // // Start HealthDatastore creation when this page is initially loaded. Not when it is updated.
@@ -274,36 +210,8 @@ function App() {
 
     }, []);
 
-      /**
-     * Creates a new HealthLake data store for the current patient, converts the patient's JSON file
-     * to NDJSON format, and imports the NDJSON data into HealthLake.
-     * 
-     * This function orchestrates the full workflow of provisioning a data store and importing
-     * patient data, intended to be called automatically when not in debug mode.
-     * 
-     * @async
-     * @returns {Promise<void>} A promise that resolves when all operations are complete.
-     */
-
-    // async function createDataStoreAndImport() {
-    //   console.log("Creating data store and importing to HealthLake...");
-    //   if (!patientId || !s3_input || !patientBucket || !patientJSONObjectKey || !patientNDJSONObjectKey) {
-    //     console.error("Patient ID, S3 input, or bucket information is missing.");
-    //     return;
-    //   }
-    //   await createDataStore(patientId, s3_input);
-    //   await convertJsonToNdjson(patientBucket, patientJSONObjectKey, patientNDJSONObjectKey);
-    //   await importToHealthLake(s3_input);
-    // }
-
-    // if (!debugMode && ((LastImportedDataStoreID === undefined) || (LastImportedDataStoreID !== s3_input))) {
-    //   console.log(`Not in debug mode, creating data store and importing with ID ${s3_input}.`);
-    //   setLastImportedDataStoreID(s3_input)
-    //   createDataStoreAndImport();
-    // }
-
     const debugMode = true; // For testing purposes, set to true to enable debug mode
-    if (debugMode) {
+
       return (
         <div>
           <div>
@@ -312,8 +220,10 @@ function App() {
              <p><strong>Status message:</strong> {CurrentDataStoreRecord && CurrentDataStoreRecord.status_description ? CurrentDataStoreRecord.status_description : ''}</p>
            <p><strong>Patient ICN:</strong> {patientId}</p>
             <p><strong>Patient S3 Object URL:</strong> {CurrentDataStoreRecord && CurrentDataStoreRecord.s3_input ? CurrentDataStoreRecord.s3_input : "undefined"}</p>
-           <p><button onClick={() => debugCreateDataStore()}>Debug Create Data Store</button></p>
-             <p><button onClick={() => importToHealthLake(s3_input)}>Import To Healthlake</button></p>
+          <p>{debugMode && (
+            <button onClick={() => debugCreateDataStore()}>Debug Create Data Store</button>
+          )}</p>
+             <p><button onClick={() => goToVA}>Import VA Patient To Healthlake</button></p>
             <p><button onClick={() => deleteS3BucketAndContents(patientBucket)}>Delete Patient Record</button></p>
           </div> 
           <div>
@@ -330,75 +240,14 @@ function App() {
         <button onClick={signOut}>Sign out</button>      
         </div>
       );
-    }
-    else {
-       return (
-        <div>
-          <div>
-            <h1>Patient Details</h1>
-            <p><strong>Status:</strong> {CurrentDataStoreRecord && CurrentDataStoreRecord.status ? CurrentDataStoreRecord.status : status}</p>
-            <p><strong>Patient ICN:</strong> {patientId}</p>
-            <p><strong>Patient S3 Object URL:</strong> {CurrentDataStoreRecord && CurrentDataStoreRecord.s3_input ? CurrentDataStoreRecord.s3_input : "undefined"}</p>
-            <p><strong>HealthLake Data Store ID:</strong> {CurrentDataStoreRecord != undefined && CurrentDataStoreRecord.datastore_id != undefined ? CurrentDataStoreRecord.datastore_id : "undefined"}</p>
-            <p><button
-              onClick={() => deleteS3BucketAndContents(patientBucket)}
-              disabled={!CurrentDataStoreRecord}
-            >
-              Delete Patient Record
-            </button></p>
-          </div>
-          <div>
-            <ul>
-              {HealthLakeDatastoresArray.map((HealthLakeDatastore, index) => (
-
-                <li
-                  onClick={() => HealthLakeDatastore.id && setCurrentDatastoreRecordIndex(index)}
-                  key={HealthLakeDatastore.id}>{HealthLakeDatastore.s3_input} {HealthLakeDatastore.status}</li>
-              ))}
-            </ul>
-          </div>
-          <div style={{ margin: "10px 0" }}></div>
-        <button onClick={signOut}>Sign out</button>      
-  </div>
-      );
-    }
-  
-  //  return (
-  //     <main>
-  //       <button onClick={goToVA}>Login to VA</button>
-  //       <div style={{ margin: "10px 0" }}></div>
-  //       <button onClick={debugDisplayPatient}>Debug HealthLakeImport</button>
-  //       <div style={{ margin: "10px 0" }}></div>
-  //       <button onClick={signOut}>Sign out</button>
-  //     </main>
-  //   );
-
-  }
-
-  /**
-   * Displays the main application page with login, debug, and sign out options.
-   * 
-   * @returns The React component for the main page.
-   */
-
-  // function DisplayMain() {
-  //   console.log("DisplayMain");
-  //   return (
-  //     <main>
-  //       <button onClick={goToVA}>Login to VA</button>
-  //       <div style={{ margin: "10px 0" }}></div>
-  //       <button onClick={debugDisplayPatient}>Debug HealthLakeImport</button>
-  //       <div style={{ margin: "10px 0" }}></div>
-  //       <button onClick={signOut}>Sign out</button>
-  //     </main>
-  //   );
-  // }
+      }
 
   return (
     <Router>
       <Routes>
         <Route path="/" element={<DisplayPatient />} />
         <Route path="/create_datastore" element={<CreateDataStorePage />} />
+        <Route path="/import" element={<ImportToDataStorePage />} />
       </Routes>
     </Router>
   );

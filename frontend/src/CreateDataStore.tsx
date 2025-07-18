@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import type { Schema, HealthLakeDatastoreRecord, FunctionResponse } from "../../amplify/data/resource"
-import { parseFunctionResultJson, updateHealthLakeDatastoreStatus } from "./UtilityFunctions";
+import type { Schema, HealthLakeDatastoreRecord } from "../../amplify/data/resource"
+import { parseFunctionResultJson } from "./UtilityFunctions";
 import { useSearchParams } from "react-router-dom";
 import { Amplify } from "aws-amplify";
 import outputs from "../../amplify_outputs.json";
 
 import { generateClient } from "aws-amplify/api"
-import { findAlarmThresholds } from "aws-cdk-lib/aws-autoscaling-common";
+
 
 
 Amplify.configure(outputs);
@@ -68,9 +68,12 @@ async function createDataStore(patientId: string, s3_input: string): Promise<boo
       patient_icn: patientId,
     });
 
+    // This function often returns a "ExecutionTimeoutException" error, even though the lambda function is still running.
+    // This may be an issue with REACT's handling of the async function, or it may be an Amplify issue.
+
     const jsonResult = parseFunctionResultJson(result.data ?? "{success: false, message: 'No data returned'}");
     if (!jsonResult.success) {
-      console.error("Failed to convert createDataStore:", jsonResult.message, "function result:", result);
+      console.error("Failed to parse JSON result for createDataStore:", jsonResult.message, "function result:", result);
       return false;
     }
 
@@ -83,6 +86,15 @@ async function createDataStore(patientId: string, s3_input: string): Promise<boo
   }
 }
 
+
+function importPatentRecord(healthRecordID: string | null) {
+  console.log("Importing patient with health record ID:", healthRecordID, "to HealthLake data store");
+  if (!healthRecordID) {
+    console.error("Health record ID is required to import patient record.");
+    return;
+  }
+  window.location.href = `/import?healthRecordID=${healthRecordID}`;
+}
 
 /**
    * Creates a new HealthLake data store for the current patient, converts the patient's JSON file
@@ -156,62 +168,60 @@ export function CreateDataStorePage() {
   ``
 
 
-  useEffect(() => {
-    async function CreateTheDataStore() {
-      console.log("Creating new DynamoDB healthLake data store record with s3_input:", s3_input, "and patientId:", patientId );
-      const s3_output = `${s3_input}_output`;
+  async function CreateTheDataStore() {
+    console.log("Creating new DynamoDB healthLake data store record with s3_input:", s3_input, "and patientId:", patientId);
+    const s3_output = `${s3_input}_output`;
 
-      const healthLakeDatastore: HealthLakeDatastoreRecord =
-      {
-        s3_input: String(s3_input),
-        s3_output: s3_output,
-        id: health_record_id,
-        patient_icn: String(patientId),
-        name: 'test',
-        datastore_id: null,
-        status: "Initialized",
-        status_description: "Data store initialized, ready for creation",
-      };
-      try {
-        client.models.HealthLakeDatastore.create(healthLakeDatastore).then(async ({ errors }) => {
-          if (errors) {
-            console.error("Error creating DynamoDB data store record", errors);
+    const healthLakeDatastore: HealthLakeDatastoreRecord =
+    {
+      s3_input: String(s3_input),
+      s3_output: s3_output,
+      id: health_record_id,
+      patient_icn: String(patientId),
+      name: 'test',
+      datastore_id: null,
+      status: "Initialized",
+      status_description: "Data store initialized, ready for creation",
+    };
+    try {
+      client.models.HealthLakeDatastore.create(healthLakeDatastore).then(async ({ errors }) => {
+        if (errors) {
+          console.error("Error creating DynamoDB data store record", errors);
+        }
+        else {
+          console.log("DynamoDB data store record created successfully:", healthLakeDatastore);
+          if (
+            typeof patientId === "string" &&
+            typeof s3_input === "string" &&
+            typeof patientBucket === "string" &&
+            typeof patientJSONObjectKey === "string" &&
+            typeof patientNDJSONObjectKey === "string"
+          ) {
+            const success = await createDataStoreAndConvertNdJSON(patientId, s3_input, patientBucket, patientJSONObjectKey, patientNDJSONObjectKey);
+            const newStatus = success ? "ACTIVE" : "CREATE_FAILED";
+
+            console.log("Data store creation finished with status:", newStatus, "updating status in DynamoDB...");
+            await client.models.HealthLakeDatastore.update({
+              id: health_record_id,
+              status: newStatus,
+              status_description: `Data store create finished with status: ${newStatus}`,
+            }).then((result) => {
+              if (result.errors) {
+                console.error("Error updating healthLake datastore status", result.errors);
+              }
+            });
+
+          } else {
+            console.error("Required parameters for createDataStoreAndConvertNdJSON are missing or invalid.");
           }
-          else {
-            console.log("DynamoDB data store record created successfully:", healthLakeDatastore);
-            if (
-              typeof patientId === "string" &&
-              typeof s3_input === "string" &&
-              typeof patientBucket === "string" &&
-              typeof patientJSONObjectKey === "string" &&
-              typeof patientNDJSONObjectKey === "string"
-            ) {
-              const success = await createDataStoreAndConvertNdJSON(patientId, s3_input, patientBucket, patientJSONObjectKey, patientNDJSONObjectKey);
-              const newStatus = success ? "ACTIVE" : "CREATE_FAILED";
-
-              await client.models.HealthLakeDatastore.update({
-                id: health_record_id,
-                status: newStatus,
-                status_description: `Data store create finished with status: ${newStatus}`,
-              }).then((result) => {
-                if (result.errors) {
-                  console.error("Error updating healthLake datastore status", result.errors);
-                }
-              });
-
-            } else {
-              console.error("Required parameters for createDataStoreAndConvertNdJSON are missing or invalid.");
-            }
-          }
-        });
-      }
-      catch (error) {
-        console.error("Error creating HealthLakeDatastore record:", error);
-      }
+        }
+      });
     }
-    CreateTheDataStore();
+    catch (error) {
+      console.error("Error creating HealthLakeDatastore record:", error);
+    }
+  }
 
-  }, []);
 
   useEffect(() => {
     client.models.HealthLakeDatastore.observeQuery({
@@ -238,12 +248,44 @@ export function CreateDataStorePage() {
       <div>
         <h1>Patient Details</h1>
         <p><strong>Status:</strong> {CurrentDataStoreRecord && CurrentDataStoreRecord.status ? CurrentDataStoreRecord.status : status}</p>
+        <p><strong>Status Description:</strong> {CurrentDataStoreRecord && CurrentDataStoreRecord.status_description ? CurrentDataStoreRecord.status_description : "undefined"}</p>
         <p><strong>Patient ICN:</strong> {patientId}</p>
         <p><strong>Patient S3 Object URL:</strong> {CurrentDataStoreRecord && CurrentDataStoreRecord.s3_input ? CurrentDataStoreRecord.s3_input : "undefined"}</p>
         <p><strong>HealthLake Data Store ID:</strong> {CurrentDataStoreRecord != undefined && CurrentDataStoreRecord.datastore_id != undefined ? CurrentDataStoreRecord.datastore_id : "undefined"}</p>
         <div style={{ margin: "10px 0" }}></div>
-        <button onClick={ReturnToPatientsPage}>Patients Page</button>
+        {!CurrentDataStoreRecord && (
+          <div>
+            <button
+              onClick={() => CreateTheDataStore()}
+              style={{ marginBottom: "10px", display: "block" }}
+            >
+              Create Data Store
+            </button>
+          </div>
+        )}
 
+        <div>
+          <button
+            onClick={() => importPatentRecord(CurrentDataStoreRecord?.id ?? null)}
+            style={{ marginBottom: "10px", display: "block" }}
+            disabled={
+              !CurrentDataStoreRecord || (
+              CurrentDataStoreRecord.status !== "ACTIVE" &&
+              CurrentDataStoreRecord.status !== "CREATING")
+            }
+          >
+            Import Patient Record
+          </button>
+        </div>
+
+        <div>
+          <button
+            onClick={ReturnToPatientsPage}
+            style={{ marginBottom: "10px", display: "block" }}
+          >
+            Return to Patients Page
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -98,8 +98,12 @@ export const handler: Schema["importFHIR"]["functionHandler"] = async (event): P
       
 
     });
-        updateHealthLakeDatastoreStatus(id ?? undefined, "IMPORT_COMPLETE",
-          `Wait for import: import status:  ${status}`);
+    const importStatus = status === "COMPLETED" ? "IMPORT_COMPLETE" : "IMPORT_FAILED";
+    await updateHealthLakeDatastoreStatus(
+      id ?? undefined,
+      importStatus,
+      `Wait for import: import status:  ${status}`
+    );
     
     console.log("HealthLake import status:", status);
   }
