@@ -271,7 +271,7 @@ export function CreateDataStorePage() {
             disabled={
               !CurrentDataStoreRecord || (
               CurrentDataStoreRecord.status !== "ACTIVE" &&
-              CurrentDataStoreRecord.status !== "CREATING")
+              CurrentDataStoreRecord.status !== "CREATING") // CREATING isa hack to work around a lambda timeout issue.
             }
           >
             Import Patient Record

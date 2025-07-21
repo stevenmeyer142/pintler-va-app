@@ -236,7 +236,7 @@ const startApp = async () => {
           const bucketName = await createBucketAndUploadFile(patient_icn, opjectKey, patient_record, kms_key);
           
           console.log('Created bucket', bucketName);
-          const redirectUrl = `${main_location}display_patient?patientId=${patient_icn}&patientBucket=${bucketName}&patientObjectKey=${opjectKey}`;
+          const redirectUrl = `${main_location}create_datastore?patientId=${patient_icn}&patientBucket=${bucketName}&patientObjectKey=${opjectKey}`;
  
           res.redirect(redirectUrl);
           }

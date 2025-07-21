@@ -49,6 +49,7 @@ async function deleteS3BucketAndContents(bucketName: string) {
  * Initiates the VA login flow by setting session values and redirecting to the VA authentication endpoint.
  */
 function goToVA() {
+  console.log("Redirecting to VA authentication...");
   const requestBody = {
     main_location: window.location.href,
     kms_key: outputs.custom.kmsKey,
@@ -126,7 +127,7 @@ function App() {
     // // }
 
     // // const patientNDJSONObjectKey = patientJSONObjectKey.replace(".json", ".ndjson");
-  
+    var s3_input = `Not provided`;
     // // const [LastImportedDataStoreID, setLastImportedDataStoreID] = useState<string | undefined>(undefined);
 
     // // Start HealthDatastore creation when this page is initially loaded. Not when it is updated.
@@ -223,7 +224,7 @@ function App() {
           <p>{debugMode && (
             <button onClick={() => debugCreateDataStore()}>Debug Create Data Store</button>
           )}</p>
-             <p><button onClick={() => goToVA}>Import VA Patient To Healthlake</button></p>
+             <p><button onClick={() => goToVA()}>Import VA Patient To Healthlake</button></p>
             <p><button onClick={() => deleteS3BucketAndContents(patientBucket)}>Delete Patient Record</button></p>
           </div> 
           <div>

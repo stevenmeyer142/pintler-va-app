@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Schema, HealthLakeDatastoreRecord } from "../../amplify/data/resource"
+import type { Schema } from "../../amplify/data/resource"
 import { parseFunctionResultJson} from "./UtilityFunctions";
 import { useSearchParams } from "react-router-dom";
 import { Amplify } from "aws-amplify";
