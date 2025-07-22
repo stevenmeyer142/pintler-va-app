@@ -250,7 +250,7 @@ export function CreateDataStorePage() {
         <p><strong>Status:</strong> {CurrentDataStoreRecord && CurrentDataStoreRecord.status ? CurrentDataStoreRecord.status : status}</p>
         <p><strong>Status Description:</strong> {CurrentDataStoreRecord && CurrentDataStoreRecord.status_description ? CurrentDataStoreRecord.status_description : "undefined"}</p>
         <p><strong>Patient ICN:</strong> {patientId}</p>
-        <p><strong>Patient S3 Object URL:</strong> {CurrentDataStoreRecord && CurrentDataStoreRecord.s3_input ? CurrentDataStoreRecord.s3_input : "undefined"}</p>
+        <p><strong>Patient S3 Object URL:</strong> {s3_input}</p>
         <p><strong>HealthLake Data Store ID:</strong> {CurrentDataStoreRecord != undefined && CurrentDataStoreRecord.datastore_id != undefined ? CurrentDataStoreRecord.datastore_id : "undefined"}</p>
         <div style={{ margin: "10px 0" }}></div>
         {!CurrentDataStoreRecord && (

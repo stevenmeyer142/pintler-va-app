@@ -12,9 +12,9 @@
 
 import { useEffect, useState } from "react";
 import { useAuthenticator } from '@aws-amplify/ui-react';
-import { BrowserRouter as Router, Route, Routes} from "react-router-dom";
-import type { Schema} from "../../amplify/data/resource"
-import {CreateDataStorePage} from "./CreateDataStore"
+import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+import type { Schema } from "../../amplify/data/resource"
+import { CreateDataStorePage } from "./CreateDataStore"
 import { ImportToDataStorePage } from "./ImportToDataStore";
 import { Amplify } from "aws-amplify";
 import outputs from "../../amplify_outputs.json";
@@ -26,21 +26,21 @@ Amplify.configure(outputs);
 const client = generateClient<Schema>()
 
 /**
- * Deletes an S3 bucket and all its contents by invoking the `deleteBucket` query on the backend.
+ * Deletes a HealthLake data store and its associated resourcs by its ID. 
  * 
- * @param bucketName - The name of the S3 bucket to delete.
+ * @param id - The ID of the S3 bucket to delete.
  * @returns A promise that resolves when the bucket and its contents are deleted.
  */
-async function deleteS3BucketAndContents(bucketName: string) {
+async function deleteDataStore(id: string) {
   try {
-    console.log(`Deleting bucket "${bucketName}" and objects...`);
-    const result = await client.queries.deleteBucket({
-      bucket_name: bucketName,
+    console.log(`Deleting data store with DyanamoDB recorde id "${id}"`);
+    const result = await client.queries.deleteDatastore({
+      health_record_id: id,
     });
-    console.log("Bucket with result:", result);
+    console.log("Delete data store result", result);
   }
   catch (error) {
-    console.error("Error deleting bucket:", error);
+    console.error("Error deleting data store:", error);
   }
 }
 
@@ -84,7 +84,7 @@ function goToVA() {
  * @returns The root React component for the application.
  */
 function App() {
-    const { signOut } = useAuthenticator();
+  const { signOut } = useAuthenticator();
 
 
   /**
@@ -111,62 +111,18 @@ function App() {
   function DisplayPatient() {
     const [HealthLakeDatastoresArray, setHealthLakeDatastoresArray] = useState<Array<Schema["HealthLakeDatastore"]["type"]>>([]);
     const [CurrentDataStoreRecord, setCurrentDataStoreRecord] = useState<Schema["HealthLakeDatastore"]["type"] | undefined>(undefined);
-    // const [InitialId, setInitialId] = useState<string | undefined>(undefined);
-    // // const [searchParams] = useSearchParams();
-  
-     var patientId =  "Not provided";
+
+    var patientId = "Not provided";
     const patientBucket = "Delete me";
-    // // const patientJSONObjectKey = searchParams.get("patientObjectKey") || undefined;
-    // // const debugMode = searchParams.get("debugMode") === "true";
 
     var status = "Not provided";
 
-    // // if (!patientBucket || !patientJSONObjectKey) {
-    // //   console.error("Patient bucket or object key not provided in search parameters.");
-    // //   return <div>Error: Patient bucket or object key not provided.</div>;
-    // // }
-
-    // // const patientNDJSONObjectKey = patientJSONObjectKey.replace(".json", ".ndjson");
-    var s3_input = `Not provided`;
-    // // const [LastImportedDataStoreID, setLastImportedDataStoreID] = useState<string | undefined>(undefined);
-
-    // // Start HealthDatastore creation when this page is initially loaded. Not when it is updated.
-    // // This is to prevent the datastore from being created multiple times when the page is reloaded
-    // // or when the component is re-rendered.
-
-  //  if (InitialId === undefined) {
-  //   useEffect(() => { 
-  //        console.log("Creating new DynamoDB healthLake data store record");
-  //   const s3_output = `${s3_input}_output`;
-  //   setInitialId(s3_input);
-  //   const healthLakeDatastore: HealthLakeDatastoreRecord =
-  //   {
-  //     s3_input: String(s3_input),
-  //     s3_output: s3_output,
-  //     id: String(s3_output),
-  //     patient_icn: String(patientId),
-  //     name: 'test',
-  //     datastore_id : null,
-  //     status: "",
-  //     status_description: "Data store initialized, ready for creation",
-  //          };
-  //         client.models.HealthLakeDatastore.create(healthLakeDatastore).then(({ errors}) => {
-  //           if (errors) {
-  //             console.error("Error creating DynamoDB data store record", errors);
-  //           }
-  //           else {
-  //             createDataStoreAndImport();
-  //           }
-  //         });
-
-  //    }, []); 
-  //      }
     /**
-     * Sets the current HealthLake data store record by index.
-     * 
-     * @param index - The index of the data store record to set as current.
-     * @returns A promise that resolves when the current record is set.
-     */
+   * Sets the current HealthLake data store record by index.
+   * 
+   * @param index - The index of the data store record to set as current.
+   * @returns A promise that resolves when the current record is set.
+   */
     async function setCurrentDatastoreRecordIndex(index: number) {
       console.log("Setting current datastore record index to:", index);
       if (index >= 0 && index < HealthLakeDatastoresArray.length) {
@@ -174,15 +130,13 @@ function App() {
         console.log("Current datastore record:", currentRecord);
         setCurrentDataStoreRecord(currentRecord);
         patientId = currentRecord.patient_icn || "Not provided";
-        s3_input = currentRecord.s3_input || "Not provided";
 
       } else {
         console.log("Index out of bounds for HealthLakeDatastoresArray");
         setCurrentDataStoreRecord(undefined);
         patientId = "Not provided";
-        s3_input = "Not provided";
       }
-    
+
 
       if (HealthLakeDatastoresArray.length > 0) {
         if (CurrentDataStoreRecord === undefined) {
@@ -201,7 +155,7 @@ function App() {
       else {
         setCurrentDataStoreRecord(undefined);
       }
-    
+
     }
 
     useEffect(() => {
@@ -213,35 +167,35 @@ function App() {
 
     const debugMode = true; // For testing purposes, set to true to enable debug mode
 
-      return (
+    return (
+      <div>
         <div>
-          <div>
-            <h1>Patient Details</h1>
-            <p><strong>Status:</strong> {CurrentDataStoreRecord && CurrentDataStoreRecord.status ? CurrentDataStoreRecord.status : status}</p>
-             <p><strong>Status message:</strong> {CurrentDataStoreRecord && CurrentDataStoreRecord.status_description ? CurrentDataStoreRecord.status_description : ''}</p>
-           <p><strong>Patient ICN:</strong> {patientId}</p>
-            <p><strong>Patient S3 Object URL:</strong> {CurrentDataStoreRecord && CurrentDataStoreRecord.s3_input ? CurrentDataStoreRecord.s3_input : "undefined"}</p>
+          <h1>Patient Details</h1>
+          <p><strong>Status:</strong> {CurrentDataStoreRecord && CurrentDataStoreRecord.status ? CurrentDataStoreRecord.status : status}</p>
+          <p><strong>Status message:</strong> {CurrentDataStoreRecord && CurrentDataStoreRecord.status_description ? CurrentDataStoreRecord.status_description : ''}</p>
+          <p><strong>Patient ICN:</strong> {CurrentDataStoreRecord && CurrentDataStoreRecord.patient_icn ? CurrentDataStoreRecord.patient_icn : ''}</p>
+          <p><strong>Patient S3 Object URL:</strong> {CurrentDataStoreRecord && CurrentDataStoreRecord.s3_input ? CurrentDataStoreRecord.s3_input : ""}</p>
           <p>{debugMode && (
             <button onClick={() => debugCreateDataStore()}>Debug Create Data Store</button>
           )}</p>
-             <p><button onClick={() => goToVA()}>Import VA Patient To Healthlake</button></p>
-            <p><button onClick={() => deleteS3BucketAndContents(patientBucket)}>Delete Patient Record</button></p>
-          </div> 
-          <div>
-            <ul>
-              {HealthLakeDatastoresArray.map((HealthLakeDatastore, index) => (
-
-                <li
-                  onClick={() => HealthLakeDatastore.id && setCurrentDatastoreRecordIndex(index)}
-                  key={HealthLakeDatastore.id}>{HealthLakeDatastore.s3_input} {HealthLakeDatastore.status}</li>
-              ))}
-            </ul>
-          </div>
-          <div style={{ margin: "10px 0" }}></div>
-        <button onClick={signOut}>Sign out</button>      
+          <p><button onClick={() => goToVA()}>Import VA Patient To Healthlake</button></p>
+          <p><button onClick={() => deleteDataStore(patientBucket)}>Delete Patient Record</button></p>
         </div>
-      );
-      }
+        <div>
+          <ul>
+            {HealthLakeDatastoresArray.map((HealthLakeDatastore, index) => (
+
+              <li
+                onClick={() => HealthLakeDatastore.id && setCurrentDatastoreRecordIndex(index)}
+                key={HealthLakeDatastore.id}>{HealthLakeDatastore.s3_input} {HealthLakeDatastore.status}</li>
+            ))}
+          </ul>
+        </div>
+        <div style={{ margin: "10px 0" }}></div>
+        <button onClick={signOut}>Sign out</button>
+      </div>
+    );
+  }
 
   return (
     <Router>

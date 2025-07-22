@@ -24,7 +24,7 @@ export const waitDataStoreDeleted = async (dataStoreId: string, callback: (statu
             const response = await healthLakeClientInstance.send(new DescribeFHIRDatastoreCommand({
                 DatastoreId: dataStoreId
             }));
-            status = response.DatastoreProperties?.DatastoreStatus ?? DatastoreStatus.DELETING; // Get the current status
+            status = response.DatastoreProperties?.DatastoreStatus ?? DatastoreStatus.DELETED; // Get the current status
             console.log("Data store status:", status);      
             // Invoke the callback with the current status if provided
             callback(status);   

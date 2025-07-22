@@ -171,18 +171,18 @@ const startApp = async () => {
   app.use(bodyParser.urlencoded({ extended: true }));
 
 
-  app.post('/', (req: Request, res) => {
-    const has_token = req.session.user?.accessToken !== undefined;
+  // app.post('/', (req: Request, res) => {
+  //   const has_token = req.session.user?.accessToken !== undefined;
 
-    const url = `https://${environment.env}-api.va.gov/oauth2/claims/${environment.version}/authorization?clientID=${environment.clientID}&nonce=${environment.nonce}&redirect_uri=${environment.redirect_uri}&response_type=code&scope=${environment.scope}&state=1589217940`;
+  //   const url = `https://${environment.env}-api.va.gov/oauth2/claims/${environment.version}/authorization?clientID=${environment.clientID}&nonce=${environment.nonce}&redirect_uri=${environment.redirect_uri}&response_type=code&scope=${environment.scope}&state=1589217940`;
 
-    // TODO: why are these the same for if and else?
-    if (req.session && req.session.user) {
-      res.render('index', { has_token: has_token, autherizeLink: url })
-    } else {
-      res.render('index', { has_token: has_token, autherizeLink: url })
-    }
-  });
+  //   // TODO: why are these the same for if and else?
+  //   if (req.session && req.session.user) {
+  //     res.render('index', { has_token: has_token, autherizeLink: url })
+  //   } else {
+  //     res.render('index', { has_token: has_token, autherizeLink: url })
+  //   }
+  // });
 
   
   app.get('/home', (req: Request, res: Response) => {
@@ -282,17 +282,7 @@ const startApp = async () => {
   });
   app.get('/auth/cb', wrapAuth);
 
-  
-  // app.get('/return_toapp', (req, res) => {
-  //   console.log('return_toapp endpoint hit main_location', main_location);
-  //   const patientName = req.query.patientName || "Unknown";
-  //   const patientID = req.query.patientID || "Unknown";
-  //   console.log(`Patient Name: ${patientName}, Patient ID: ${patientID}`);
-  //   const redirectUrl = `${main_location}/patient_import?patientName=${patientName}&patientID=${patientID}`;
- 
-  //   res.redirect(redirectUrl);
-  // });
-}
+  }
 
 (async () => {
   try {

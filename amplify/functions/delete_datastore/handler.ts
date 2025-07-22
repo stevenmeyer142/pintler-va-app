@@ -60,7 +60,7 @@ export const handler: Schema["deleteDatastore"]["functionHandler"] = async (even
     return JSON.stringify({ success: false, message: `Error deleting bucket: ${error.message}` });
   }
 
-  try { 
+  try {
     const dataStoreId = healthLakeDatastore.datastore_id;
     if (!dataStoreId) {
       console.error("datastore_id is null or undefined");
@@ -85,14 +85,14 @@ export const handler: Schema["deleteDatastore"]["functionHandler"] = async (even
       console.error("HealthLake data store deletion failed or timed out");
       return JSON.stringify({ success: false, message: "HealthLake data store deletion failed or timed out" });
     }
-const { errors } = await client.models.HealthLakeDatastore.delete({
+    const { errors } = await client.models.HealthLakeDatastore.delete({
       id: health_record_id,
     });
     if (errors) {
       console.error("Error deleting DynamoDB record", errors);
       return JSON.stringify({ success: false, message: errors[0].message });
     }
-    
+
     return JSON.stringify({ success: true, message: `Data store successfully deleted` });
   } catch (error: any) {
     console.error("Error deleting HealthLake data store:", error);

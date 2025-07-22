@@ -134,18 +134,16 @@ const startApp = () => __awaiter(void 0, void 0, void 0, function* () {
     app.use((0, express_session_1.default)({ secret, cookie: { maxAge: 60000 }, resave: true, saveUninitialized: true }));
     app.use(body_parser_1.default.json()); // support json encoded bodies
     app.use(body_parser_1.default.urlencoded({ extended: true }));
-    app.post('/', (req, res) => {
-        var _a;
-        const has_token = ((_a = req.session.user) === null || _a === void 0 ? void 0 : _a.accessToken) !== undefined;
-        const url = `https://${environment.env}-api.va.gov/oauth2/claims/${environment.version}/authorization?clientID=${environment.clientID}&nonce=${environment.nonce}&redirect_uri=${environment.redirect_uri}&response_type=code&scope=${environment.scope}&state=1589217940`;
-        // TODO: why are these the same for if and else?
-        if (req.session && req.session.user) {
-            res.render('index', { has_token: has_token, autherizeLink: url });
-        }
-        else {
-            res.render('index', { has_token: has_token, autherizeLink: url });
-        }
-    });
+    // app.post('/', (req: Request, res) => {
+    //   const has_token = req.session.user?.accessToken !== undefined;
+    //   const url = `https://${environment.env}-api.va.gov/oauth2/claims/${environment.version}/authorization?clientID=${environment.clientID}&nonce=${environment.nonce}&redirect_uri=${environment.redirect_uri}&response_type=code&scope=${environment.scope}&state=1589217940`;
+    //   // TODO: why are these the same for if and else?
+    //   if (req.session && req.session.user) {
+    //     res.render('index', { has_token: has_token, autherizeLink: url })
+    //   } else {
+    //     res.render('index', { has_token: has_token, autherizeLink: url })
+    //   }
+    // });
     app.get('/home', (req, res) => {
         var _a;
         if (req.session && req.session.user) {
@@ -221,14 +219,6 @@ const startApp = () => __awaiter(void 0, void 0, void 0, function* () {
         passport_1.default.authenticate("oauth2")(req, res, next);
     });
     app.get('/auth/cb', wrapAuth);
-    // app.get('/return_toapp', (req, res) => {
-    //   console.log('return_toapp endpoint hit main_location', main_location);
-    //   const patientName = req.query.patientName || "Unknown";
-    //   const patientID = req.query.patientID || "Unknown";
-    //   console.log(`Patient Name: ${patientName}, Patient ID: ${patientID}`);
-    //   const redirectUrl = `${main_location}/patient_import?patientName=${patientName}&patientID=${patientID}`;
-    //   res.redirect(redirectUrl);
-    // });
 });
 (() => __awaiter(void 0, void 0, void 0, function* () {
     try {

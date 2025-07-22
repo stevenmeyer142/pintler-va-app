@@ -17,12 +17,10 @@ const serverless_express_1 = __importDefault(require("@codegenie/serverless-expr
 console.log("Loading serverless express...");
 const app_backend_1 = require("./app_backend");
 console.log("Starting serverless express app...");
-//export const handler = serverlessExpress({ app });
 let serverlessExpressInstance = null;
 function setup(event, context) {
     return __awaiter(this, void 0, void 0, function* () {
         yield app_backend_1.environment.updateClientSecrets();
-        // await environment.listS3Buckets();
         (0, app_backend_1.configurePassport)();
         serverlessExpressInstance = (0, serverless_express_1.default)({ app: app_backend_1.app });
         return serverlessExpressInstance(event, context);

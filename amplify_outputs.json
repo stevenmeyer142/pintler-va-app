@@ -227,14 +227,14 @@
             }
           }
         },
-        "deleteBucket": {
-          "name": "deleteBucket",
+        "deleteDatastore": {
+          "name": "deleteDatastore",
           "isArray": false,
           "type": "String",
           "isRequired": false,
           "arguments": {
-            "bucket_name": {
-              "name": "bucket_name",
+            "health_record_id": {
+              "name": "health_record_id",
               "isArray": false,
               "type": "String",
               "isRequired": false
