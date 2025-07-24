@@ -11,8 +11,6 @@ The frontend code is in the folder "frontend".
 
 The backend code is in the folders "amplify/functions" and "amplify/custom/va-access"
 
-A DynamoDB database is used to track the resources and status.
-
 ## VA access setup.
 
 The app is currently configured to use the VA patient sandbox database.
@@ -40,14 +38,11 @@ The code that uses the secrets can be found in the file "amplify/custom/va-acces
 
 Changes to amplify/custom/va-access require running the script "amplify/custom/va-access/build.sh"
 
-## Issues
-
-There is a problem with timeout for the Lambda functions. Sometimes a timeout error is received in React and the Lambda function is still running. Sometimes creating a HealthLake data store or importing to the data store cannot complete in the 15 minute limit for Lambda functions.
-
-An alternative implementation could monitor the status of "CreateFHIRDatastore" and "StartFHIRImportJob" using EventBridge and SNS notifications to update the DynamoDB record, instead of using the actions "DescribeFHIRDatastore" and "DescribeFHIRImportJob".
-
 ## Deploying to AWS
 
-For detailed instructions on deploying your application, refer to the [deployment section](https://docs.amplify.aws/react/start/quickstart/#deploy-a-fullstack-app-to-aws) in the AWS Amplify documentation.
+For detailed instructions on deploying your application, refer to the [deployment section](https://docs.amplify.aws/react/start/quickstart/#deploy-a-fullstack-app-to-aws) of our documentation.
 
+## Security
+
+See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
 

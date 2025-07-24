@@ -48,8 +48,20 @@ const statement2 = new iam.PolicyStatement({
 })
 
 const adminAccess = new iam.PolicyStatement({
-  sid: "AdminAccess",
-  actions: ["*"],
+  sid: "ImportFHIRAdminAccess",
+  actions:   [
+                "logs:*",
+                "cloudwatch:GenerateQuery",
+                "cloudwatch:GenerateQueryResultsSummary",
+                "healthlake:*",
+                "s3:ListAllMyBuckets",
+                "s3:ListBucket",
+                "s3:GetObject",
+                "s3:GetBucketLocation",
+                "iam:ListRoles",
+                "ssm:GetParameters",
+                "kms:Decrypt"
+            ],
   resources: ["*"],
   effect: iam.Effect.ALLOW
 })

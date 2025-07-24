@@ -99,13 +99,14 @@ export const handler: Schema["importFHIR"]["functionHandler"] = async (event): P
 
     });
     const importStatus = status === "COMPLETED" ? "IMPORT_COMPLETE" : "IMPORT_FAILED";
-    await updateHealthLakeDatastoreStatus(
+    const result = await updateHealthLakeDatastoreStatus(
       id ?? undefined,
       importStatus,
-      `Wait for import: import status:  ${status}`
+      `Wait for import completed: import status:  ${status}`
     );
     
-    console.log("HealthLake import status:", status);
+    console.log("HealthLake import status:", status, "importStatus:", importStatus, "Update dynamoDB result:", result);
+    await new Promise(resolve => setTimeout(resolve, 5000)); // Wait for 5 seconds because the DataStore may not be updated immediately
   }
   catch (error: any) {
     console.error("Error waiting for import job to complete:", error);

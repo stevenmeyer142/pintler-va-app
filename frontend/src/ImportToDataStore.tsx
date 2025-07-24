@@ -104,8 +104,9 @@ export function ImportToDataStorePage() {
           onClick={() => ImportToDataStore()}
           style={{ marginRight: "10px" }}
           disabled={
-            !CurrentDataStoreRecord ||
-            CurrentDataStoreRecord.status !== "ACTIVE"
+            !CurrentDataStoreRecord || (
+            CurrentDataStoreRecord.status !== "ACTIVE" &&
+            CurrentDataStoreRecord.status !== "CREATING")  // This is a hack to handle Lambda timeout issues.
           }
         >
           Import Patient Record
