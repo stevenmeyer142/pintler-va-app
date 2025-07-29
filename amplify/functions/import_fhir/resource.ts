@@ -15,16 +15,26 @@ export class ImportFHIRConstruct extends Construct {
   constructor(scope: Construct, id: string) {
     super(scope, id);
 
-    const role = new iam.Role(this, 'VAHealthLakeImportRole', {
+    const dataAccessPolicy = new iam.PolicyStatement({
+      sid: "ImportFHIRDataAccess",
+      actions: ["healthlake:*",
+              "s3:*",
+              "iam:*",
+              "ram:*",
+              "kms:*",
+            "logs:*",
+              "cloudwatch:*",
+            "glue:*"],
+      resources: ["*"],
+      effect: iam.Effect.ALLOW,
+    })
+    
+
+    const role = new iam.Role(this, 'VAHealthLakeImportDataAccessRole', {
       assumedBy: new iam.ServicePrincipal('healthlake.amazonaws.com'),
       description: 'Role for healthlake importing data from S3',
     });
-
-    role.addToPolicy(new iam.PolicyStatement({
-      actions: ['*'],
-      resources: ['*'],
-      effect: iam.Effect.ALLOW,
-    }));
+    role.addToPolicy(dataAccessPolicy);
 
     this.data_access_role_arn = role.roleArn;
   }

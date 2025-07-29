@@ -20,56 +20,25 @@ const backend = defineBackend({
 
 const importFHIRLambda = backend.importFHIR.resources.lambda;
 const createDataStoreLambda = backend.createDataStore.resources.lambda;
-
 const healthLakeActionsPolicy = new iam.PolicyStatement({
-  sid: "AllowImportFHIR",
+  sid: "CreateDataStoreHealthLakeActions",
   actions: ["healthlake:*",
-          "s3:*",
-          "iam:*",
-          "ram:*",
-          "kms:*",
-        "logs:*",
-          "cloudwatch:*",
-        "glue:*"],
+    "s3:*",
+    "iam:*",
+    "ram:*",
+    "kms:*",
+    "logs:*",
+    "cloudwatch:*",
+    "glue:*"],
   resources: ["*"],
   effect: iam.Effect.ALLOW,
-})
-
-const statement2 = new iam.PolicyStatement({
-  sid: "AllowImportFHIRkAssumeRole",
-  actions: ["iam:PassRole"],
-  resources: ["*"],
-  effect: iam.Effect.ALLOW,
-  conditions: {
-    StringEquals: {
-      "iam:PassedToService": "healthlake.amazonaws.com"
-    }
-  }
-})
-
-const adminAccess = new iam.PolicyStatement({
-  sid: "ImportFHIRAdminAccess",
-  actions:   [
-                "logs:*",
-                "cloudwatch:GenerateQuery",
-                "cloudwatch:GenerateQueryResultsSummary",
-                "healthlake:*",
-                "s3:ListAllMyBuckets",
-                "s3:ListBucket",
-                "s3:GetObject",
-                "s3:GetBucketLocation",
-                "iam:ListRoles",
-                "ssm:GetParameters",
-                "kms:Decrypt"
-            ],
-  resources: ["*"],
-  effect: iam.Effect.ALLOW
 })
 
 
 createDataStoreLambda.addToRolePolicy(healthLakeActionsPolicy);
-// importFHIRLambda.addToRolePolicy(statement2)
-//importFHIRLambda.addToRolePolicy(adminAccess)
+
+
+importFHIRLambda.addToRolePolicy(healthLakeActionsPolicy);
 
 const deleteBucketPolicy = new iam.PolicyStatement({
   sid: "DeleteBucket",
@@ -91,16 +60,6 @@ const importFHIRConstruct = new ImportFHIRConstruct(
   'ImportFHIRConstruct',
 );
 
-const importFHIRPolicy = new iam.PolicyStatement({
-  sid: "ImportFHIRPolicy",
-  actions: [
-    "healthlake:*",
-    "healthlake:StartFHIRImportJob",
-  ],
-  resources: ["*"],
-  effect: iam.Effect.ALLOW,
-});
-importFHIRLambda.addToRolePolicy(adminAccess);  // TODO : Review this policy
 const jsontoNDJsonLambda = backend.s3JsonToNdjson.resources.lambda;
 
 const s3JsonToNdjsonPolicy = new iam.PolicyStatement({

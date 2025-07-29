@@ -3,6 +3,7 @@ import { Amplify } from 'aws-amplify';
 import { generateClient } from 'aws-amplify/data';
 import outputs from "../../../amplify_outputs.json"
 import { createHealthLakeDataStore, waitDataStoreActive } from './create_datastore_aws_health_lake';
+import { DatastoreStatus,} from "@aws-sdk/client-healthlake";
 
 Amplify.configure(outputs);
 
@@ -84,10 +85,11 @@ export const handler: Schema["createDataStore"]["functionHandler"] = async (even
     }
 
     const success = await waitDataStoreActive(dataStoreId, (status) => {
-      console.log("Updating healthLake datastore status in DynamoDB to CREATING");
+       const newStatus = status = DatastoreStatus.CREATING ? "CREATING" : status = DatastoreStatus.ACTIVE ? "ACTIVE" : "CREATE_FAILED";
+      console.log("Updating healthLake datastore status in DynamoDB to", newStatus);
       client.models.HealthLakeDatastore.update({
         id: id,
-        status: "CREATING",
+        status: newStatus,
         status_description: `Waiting HealthLake data store with name: ${name} to become active`,
       }).then((result) => {
         if (result.errors) {
@@ -96,24 +98,11 @@ export const handler: Schema["createDataStore"]["functionHandler"] = async (even
       });
     });
 
-    const newStatus = success ? "ACTIVE" : "CREATE_FAILED";
-
-    console.log("HealthLake data store status:", success, "updating status in DynamoDB to", newStatus);
-
-    await client.models.HealthLakeDatastore.update({
-      id: id,
-      status: newStatus,
-      status_description: `Data store create finished with status: ${newStatus}`,
-    }).then((result) => {
-      if (result.errors) {
-        console.error("Error updating healthLake datastore status", result.errors);
-      }
-    });
-
     if (!success) {
       console.error("HealthLake data store did not become active");
       return JSON.stringify({ success: false, message: "HealthLake data store did not become active" });
     }
+    console.log("HealthLake data store is active");
   }
   catch (error: any) {
     console.error("Error waiting for healthLake data active:", error);

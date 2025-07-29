@@ -2,7 +2,6 @@ import { HealthLakeClient,
     StartFHIRImportJobCommand, DescribeFHIRImportJobCommand, DeleteFHIRDatastoreCommand,
     JobStatus} from "@aws-sdk/client-healthlake";
 
-
 export const healthLakeClientInstance = new HealthLakeClient();
 
 export async function startFHIRImportJob(job_name: string,
@@ -12,6 +11,65 @@ export async function startFHIRImportJob(job_name: string,
     kms_key_id: string,
     data_access_role_arn: string) {
     try {
+        /*
+         * You cannot create an IAM role directly from within this function using the AWS SDK for HealthLake.
+         * The DataAccessRoleArn must be created in advance with the necessary permissions.
+         * 
+         * Example IAM policy for the data access role:
+         * 
+         * {
+         *   "Version": "2012-10-17",
+         *   "Statement": [
+         *     {
+         *       "Effect": "Allow",
+         *       "Action": [
+         *         "s3:GetObject",
+         *         "s3:ListBucket"
+         *       ],
+         *       "Resource": [
+         *         "arn:aws:s3:::your-input-bucket",
+         *         "arn:aws:s3:::your-input-bucket/*"
+         *       ]
+         *     },
+         *     {
+         *       "Effect": "Allow",
+         *       "Action": [
+         *         "s3:PutObject"
+         *       ],
+         *       "Resource": [
+         *         "arn:aws:s3:::your-output-bucket/*"
+         *       ]
+         *     },
+         *     {
+         *       "Effect": "Allow",
+         *       "Action": [
+         *         "kms:Decrypt",
+         *         "kms:Encrypt",
+         *         "kms:GenerateDataKey"
+         *       ],
+         *       "Resource": "arn:aws:kms:your-region:your-account-id:key/your-kms-key-id"
+         *     }
+         *   ]
+         * }
+         * 
+         * The role must also have a trust relationship allowing HealthLake to assume it:
+         * 
+         * {
+         *   "Version": "2012-10-17",
+         *   "Statement": [
+         *     {
+         *       "Effect": "Allow",
+         *       "Principal": {
+         *         "Service": "healthlake.amazonaws.com"
+         *       },
+         *       "Action": "sts:AssumeRole"
+         *     }
+         *   ]
+         * }
+         * 
+         * Pass the ARN of this role as the data_access_role_arn parameter.
+         */
+        
         const response = await healthLakeClientInstance.send(new StartFHIRImportJobCommand({
             JobName: job_name,
             InputDataConfig: {

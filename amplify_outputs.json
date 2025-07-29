@@ -248,6 +248,6 @@
   "custom": {
     "gatewayURL": "https://5con67g9uc.execute-api.us-east-1.amazonaws.com/",
     "kmsKey": "1da99112-d8ff-4497-ae91-9aeef365d11d",
-    "dataAccessRoleArn": "arn:aws:iam::211125690245:role/amplify-pintlervaapp-stev-ImportFHIRConstructVAHeal-oVCRGgXAlOHL"
+    "dataAccessRoleArn": "arn:aws:iam::211125690245:role/amplify-pintlervaapp-stev-ImportFHIRConstructVAHeal-GlBALL3mnT3G"
   }
 }
