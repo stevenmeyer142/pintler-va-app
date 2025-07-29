@@ -1,4 +1,20 @@
-require('dotenv').config(); // TODO: This is probably not needed.
+/**
+ * @fileoverview
+ * Backend application logic for the VA Access App, providing OAuth2 authentication,
+ * session management, and FHIR patient data handling. Integrates with AWS Secrets Manager
+ * for secure client credential retrieval and S3 for patient record storage.
+ * 
+ * Main features:
+ * - Express server setup with EJS templating.
+ * - OAuth2 authentication using Passport.js.
+ * - Secure session management with express-session.
+ * - Patient FHIR data retrieval and upload to AWS S3.
+ * - Dynamic configuration via environment variables and AWS Secrets Manager.
+ * - API endpoints for authentication, session value updates, and patient data processing.
+ * 
+ * @module app_backend
+ */
+
 import axios from 'axios';
 import express, { Request, Response, NextFunction } from "express";
 import 'os';
@@ -6,9 +22,17 @@ import {
   GetSecretValueCommand,
   SecretsManagerClient,
 } from "@aws-sdk/client-secrets-manager";
+import crypto from 'crypto';
 
 import { createBucketAndUploadFile } from './aws_backend_s3';
 
+/**
+ * Represents a user session with OAuth2 tokens and optional profile information.
+ * @typedef {Object} User
+ * @property {string} accessToken - The OAuth2 access token for the user.
+ * @property {string} [refreshToken] - The OAuth2 refresh token for the user.
+ * @property {Record<string, any>} [profile] - Optional user profile information.
+ */
 
 class User {
   accessToken!: string;
@@ -26,13 +50,31 @@ declare module 'express-session' {
 }
 import passport from 'passport';
 import OAuth2Strategy from 'passport-oauth2';
-import https from 'https';
 import bodyParser from 'body-parser';
 
 
 var patient_record = "No patient record retrieved yet.";
 var main_location: string = "";
 var kms_key: string = "";
+
+/**
+ * Represents the application environment configuration, including OAuth2 endpoints,
+ * client credentials, and FHIR API settings.
+ * 
+ * @class
+ * @property {string} env - The environment name (e.g., "sandbox").
+ * @property {string} clientID - OAuth2 client ID.
+ * @property {string} clientSecret - OAuth2 client secret.
+ * @property {string} version - API version.
+ * @property {string} redirect_uri - OAuth2 redirect URI.
+ * @property {string} authorizationURL - OAuth2 authorization endpoint.
+ * @property {string} tokenURL - OAuth2 token endpoint.
+ * @property {string} nonce - Nonce for OAuth2 requests.
+ * @property {string} scope - OAuth2 scopes.
+ * @property {string} gatewayURL - Application gateway URL.
+ * @property {string} patient_icn - Default patient ICN for FHIR queries.
+ * @method updateClientSecrets - Asynchronously retrieves and updates client credentials from AWS Secrets Manager.
+ */
 
 class Environment {
   env: string = "sandbox";
@@ -42,7 +84,7 @@ class Environment {
   redirect_uri: string = "";
   authorizationURL: string = "";
   tokenURL: string = "";
-  nonce: string = "14343103be036d10b974c40b6eb7c6553f0b91c0f766f1e3f7358d76c377bb8d"; // TODO: dynamically set Nonce
+  nonce: string = crypto.randomBytes(32).toString('hex');
   scope: string = "profile openid offline_access launch/patient patient/AllergyIntolerance.read patient/Appointment.read patient/Binary.read patient/Condition.read patient/Device.read patient/DeviceRequest.read patient/DiagnosticReport.read patient/DocumentReference.read patient/Encounter.read patient/Immunization.read patient/Location.read patient/Medication.read patient/MedicationOrder.read patient/MedicationRequest.read patient/MedicationStatement.read patient/Observation.read patient/Organization.read patient/Patient.read patient/Practitioner.read patient/PractitionerRole.read patient/Procedure.read";
   gatewayURL: string = "";
   patient_icn = "5000335";
@@ -84,14 +126,12 @@ class Environment {
 };
 let environment: Environment = new Environment();
 
-
-class Row {
-  first_name!: string;
-  last_name!: string;
-  social_security_number!: string;
-  birth_date!: string;
-}
-
+/**
+ * Configures Passport.js with OAuth2 strategy for authentication.
+ * 
+ * @function
+ * @returns {void}
+ */
 const configurePassport = () => {
 
   passport.serializeUser((user: Express.User, done) => {
@@ -135,6 +175,17 @@ const configurePassport = () => {
 }
 
 
+/**
+ * Middleware to handle OAuth2 authentication callback, process errors,
+ * and establish user session.
+ * 
+ * @async
+ * @function
+ * @param {Request} req - Express request object.
+ * @param {Response} res - Express response object.
+ * @param {NextFunction} next - Express next middleware function.
+ * @returns {Promise<void>}
+ */
 const wrapAuth = async (req: Request, res: Response, next: NextFunction) => {
   console.log('wrapAuth called');
   //Passport or OIDC don't seem to set 'err' if our Auth Server sets them in the URL as params so we need to do this to catch that instead of relying on callback
@@ -154,11 +205,39 @@ const wrapAuth = async (req: Request, res: Response, next: NextFunction) => {
 
 };
 
+/**
+ * Checks if the user is logged in by verifying the session.
+ * 
+ * @function
+ * @param {Request} req - Express request object.
+ * @returns {boolean} True if user is logged in, false otherwise.
+ */
 const loggedIn = (req: Request) => {
   return req.session && req.session.user;
 }
 const app = express();
 
+/**
+ * Initializes and configures the Express application with authentication, session management,
+ * and API endpoints for handling FHIR patient data and user sessions.
+ *
+ * - Sets up EJS as the view engine.
+ * - Configures session management using `express-session` and custom session settings.
+ * - Initializes Passport.js for OAuth2 authentication.
+ * - Adds middleware for parsing JSON and URL-encoded request bodies.
+ * - Defines the following routes:
+ *   - `GET /home`: Renders the home page if the user is authenticated; otherwise, redirects to the login page.
+ *   - `POST /patient`: Fetches FHIR patient data using the user's access token, uploads the data to a storage bucket,
+ *     and redirects to a datastore creation endpoint. Handles errors and redirects as needed.
+ *   - `PUT /set_session_values`: Updates application-wide session values (`main_location` and `kms_key`) from the request body.
+ *   - `GET /auth`: Initiates the OAuth2 authentication flow using Passport.js.
+ *   - `GET /auth/cb`: Handles the OAuth2 authentication callback.
+ *
+ * The function is designed to be invoked asynchronously at application startup.
+ *
+ * @async
+ * @function
+ */
 const startApp = async () => {
   const secret = 'My Super Secret Secret'
 
@@ -170,21 +249,6 @@ const startApp = async () => {
   app.use(bodyParser.json()); // support json encoded bodies
   app.use(bodyParser.urlencoded({ extended: true }));
 
-
-  // app.post('/', (req: Request, res) => {
-  //   const has_token = req.session.user?.accessToken !== undefined;
-
-  //   const url = `https://${environment.env}-api.va.gov/oauth2/claims/${environment.version}/authorization?clientID=${environment.clientID}&nonce=${environment.nonce}&redirect_uri=${environment.redirect_uri}&response_type=code&scope=${environment.scope}&state=1589217940`;
-
-  //   // TODO: why are these the same for if and else?
-  //   if (req.session && req.session.user) {
-  //     res.render('index', { has_token: has_token, autherizeLink: url })
-  //   } else {
-  //     res.render('index', { has_token: has_token, autherizeLink: url })
-  //   }
-  // });
-
-  
   app.get('/home', (req: Request, res: Response) => {
 
     if (req.session && req.session.user) {
@@ -197,7 +261,7 @@ const startApp = async () => {
     }
   });
 
-   app.post('/patient', (req: Request, res) => {
+  app.post('/patient', (req: Request, res) => {
     console.log('Patient endpoint hit');
     if (req.session && req.session.user) {
       const access_token = req.session.user.accessToken;
@@ -233,12 +297,12 @@ const startApp = async () => {
           patient_record = JSON.stringify(response.data, null, 2);
           try {
             const opjectKey = 'patient_record.json';
-          const bucketName = await createBucketAndUploadFile(patient_icn, opjectKey, patient_record, kms_key);
-          
-          console.log('Created bucket', bucketName);
-          const redirectUrl = `${main_location}create_datastore?patientId=${patient_icn}&patientBucket=${bucketName}&patientObjectKey=${opjectKey}`;
- 
-          res.redirect(redirectUrl);
+            const bucketName = await createBucketAndUploadFile(patient_icn, opjectKey, patient_record, kms_key);
+
+            console.log('Created bucket', bucketName);
+            const redirectUrl = `${main_location}create_datastore?patientId=${patient_icn}&patientBucket=${bucketName}&patientObjectKey=${opjectKey}`;
+
+            res.redirect(redirectUrl);
           }
           catch (error) {
             console.error("Error creating bucket:", error);
@@ -282,7 +346,7 @@ const startApp = async () => {
   });
   app.get('/auth/cb', wrapAuth);
 
-  }
+}
 
 (async () => {
   try {
@@ -293,4 +357,10 @@ const startApp = async () => {
   }
 })();
 
+/**
+ * Exports the Express app instance, environment configuration, and Passport configuration function.
+ * @exports app
+ * @exports environment
+ * @exports configurePassport
+ */
 export { app, environment, configurePassport };

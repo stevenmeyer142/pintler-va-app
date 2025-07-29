@@ -40,14 +40,18 @@ createDataStoreLambda.addToRolePolicy(healthLakeActionsPolicy);
 
 importFHIRLambda.addToRolePolicy(healthLakeActionsPolicy);
 
-const deleteBucketPolicy = new iam.PolicyStatement({
-  sid: "DeleteBucket",
-  actions: ["s3:*"],
+const deleteDataStorePolicy = new iam.PolicyStatement({
+  sid: "DeleteDataStorePolicy",
+  actions: ["healthlake:DeleteFHIRDatastore",
+    "s3:DeleteObject",
+    "s3:ListBucket",
+    "Dynamodb:DeleteItem",
+  ],
   resources: ["*"],
   effect: iam.Effect.ALLOW,
 })
-const deleteBucketLambda = backend.deleteDatastore.resources.lambda;
-deleteBucketLambda.addToRolePolicy(deleteBucketPolicy);
+const deleteDataStoreLambda = backend.deleteDatastore.resources.lambda;
+deleteDataStoreLambda.addToRolePolicy(deleteDataStorePolicy);
 
 
 const vaAccessConstruct = new VAAccessConstruct(

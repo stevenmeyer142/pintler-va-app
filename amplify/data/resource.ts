@@ -3,7 +3,6 @@ import { importFHIR } from "../functions/import_fhir/resource"
 import { deleteDatastore } from "../functions/delete_datastore/resource"
 import { createDataStore } from "../functions/create_data_store/resource";
 import {s3JsonToNdjson} from "../functions/s3_json_to_ndjson/resource";
-import { del } from "aws-amplify/api";
 
 
 
