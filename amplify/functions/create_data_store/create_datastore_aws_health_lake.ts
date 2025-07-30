@@ -18,24 +18,28 @@ export const createHealthLakeDataStore = async (dataStoreName: string) => {
     }
 }
 
-export const waitDataStoreActive = async (dataStoreId: string, callback: (status: DatastoreStatus) => void) : Promise<boolean> => {
+export const waitDataStoreActive = async (
+    dataStoreId: string,
+    callback: (status: DatastoreStatus, i: number) => Promise<void>
+): Promise<boolean> => {
     try {
         let status: DatastoreStatus = DatastoreStatus.CREATING; // Initial status
+        let i = 0; // Counter for iterations
         while (status === DatastoreStatus.CREATING) {
             const response = await healthLakeClientInstance.send(new DescribeFHIRDatastoreCommand({
                 DatastoreId: dataStoreId
             }));
             status = response.DatastoreProperties?.DatastoreStatus ?? DatastoreStatus.CREATE_FAILED; // Get the current status
-            console.log("Data store status:", status);
+            console.log("Data store status:", status, "Iteration:", i);
 
             // Invoke the callback with the current status if provided
-            callback(status);
-
+            await callback(status, i);
+            i++; // Increment the iteration counter
+            await new Promise(resolve => setTimeout(resolve, 5000)); // Wait for 5 seconds before checking again
 
             if (status !== DatastoreStatus.CREATING) {
                 break;
             }
-            await new Promise(resolve => setTimeout(resolve, 5000)); // Wait for 5 seconds before checking again
         }
         return status == DatastoreStatus.ACTIVE; 
     } catch (error) {

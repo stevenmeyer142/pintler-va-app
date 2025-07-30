@@ -31,8 +31,12 @@ const client = generateClient<Schema>()
  * @param id - The ID of the S3 bucket to delete.
  * @returns A promise that resolves when the bucket and its contents are deleted.
  */
-async function deleteDataStore(id: string) {
+async function deleteDataStore(id: any): Promise<void> {
   try {
+    if (!id) {
+      console.error("id is required to delete data store");
+      return;
+    }
     console.log(`Deleting data store with DyanamoDB recorde id "${id}"`);
     const result = await client.queries.deleteDatastore({
       health_record_id: id,
@@ -113,7 +117,7 @@ function App() {
     const [CurrentDataStoreRecord, setCurrentDataStoreRecord] = useState<Schema["HealthLakeDatastore"]["type"] | undefined>(undefined);
 
     var patientId = "Not provided";
-    const patientBucket = "Delete me";
+    
 
     var status = "Not provided";
 
@@ -175,11 +179,12 @@ function App() {
           <p><strong>Status message:</strong> {CurrentDataStoreRecord && CurrentDataStoreRecord.status_description ? CurrentDataStoreRecord.status_description : ''}</p>
           <p><strong>Patient ICN:</strong> {CurrentDataStoreRecord && CurrentDataStoreRecord.patient_icn ? CurrentDataStoreRecord.patient_icn : ''}</p>
           <p><strong>Patient S3 Object URL:</strong> {CurrentDataStoreRecord && CurrentDataStoreRecord.s3_input ? CurrentDataStoreRecord.s3_input : ""}</p>
+         <p>{<button onClick={() => console.log("Deleting data store.")}>Delete Data Store</button>}</p>
+          <p>{<button onClick={() => goToVA()}>Import VA Patient To Healthlake</button>}</p>
           <p>{debugMode && (
             <button onClick={() => debugCreateDataStore()}>Debug Create Data Store</button>
           )}</p>
-          <p><button onClick={() => goToVA()}>Import VA Patient To Healthlake</button></p>
-          <p><button onClick={() => deleteDataStore(patientBucket)}>Delete Patient Record</button></p>
+           
         </div>
         <div>
           <ul>

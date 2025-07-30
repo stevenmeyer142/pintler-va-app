@@ -3,19 +3,19 @@
 
   <body>
     <%- include('./partials/header') %>
-       <main>
+      <main>
         <div class="large-screen:vads-u-padding-x--0">
-            <div class="site-l-wrapper">
-              <div class="vads-l-grid-container">
-                <form action="/patient" accept-charset="UTF-8" method="post">
+          <div class="site-l-wrapper">
+            <div class="vads-l-grid-container">
+              <form action="/patient" accept-charset="UTF-8" method="post">
+                <div class="vads-l-row">
+                  <div class="vads-l-col--6">
+                    <label for="patient_icn">Patient's Integration Control Number (ICN):</label>
+                    <input type="text" name="patient_icn" value="5000335" id="patient_icn" class="usa-input">
+                  </div>
                   <div class="vads-l-row">
-                    <div class="vads-l-col--6">
-                      <label for="patient_icn">Patient's Integration Control Number (ICN):</label>
-                      <input type="text" name="patient_icn" value="5000335" id="patient_icn" class="usa-input">
-                    </div>
-                    <div class="vads-l-row">
-                      <div class="vads-l-col--12 text-center">
-                        <input type="submit" value="Get Patient Record and Start Import To AWS HealthLake" class="usa-button>
+                    <div class="vads-l-col--12 text-center">
+                      <input type="submit" value="Get Patient Record and Start Import To AWS HealthLake" class="usa-button>
                       </div>
                     </div>
                 </form>

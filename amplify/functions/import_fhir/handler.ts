@@ -23,14 +23,17 @@ async function updateHealthLakeDatastoreStatus(id: string | undefined, status: s
     console.error("Error updating healthLake datastore status", errors);
     return { success: false, message: errors[0].message };
   }
+  else {
+    console.log("HealthLake datastore status updated successfully");
+  }
   return { success: true, message: "" };
 }
 
 export const handler: Schema["importFHIR"]["functionHandler"] = async (event): Promise<string | null> => {
-  const { id  } = event.arguments
+  const { id } = event.arguments
   console.log("Calling HealthLakeDatastore:", event.arguments);
 
-  if (!id ) {
+  if (!id) {
     console.error("id is required");
     return JSON.stringify({ success: false, message: "id is required" });
   }
@@ -42,11 +45,11 @@ export const handler: Schema["importFHIR"]["functionHandler"] = async (event): P
     console.error("Error getting healhLake data", errors);
     return JSON.stringify({ success: false, message: errors[0].message });
   }
- 
+
   var healthLakeDatastore: HealthLakeDatastoreRecord;
   if (!healthLakeDatastoreResult) {
     console.error("Error missing DynamoHealthLakeDatastoreRecord with id", id);
-    return JSON.stringify({ success: false, message: `Error missing HealthLakeDatastore with id ${id}`});
+    return JSON.stringify({ success: false, message: `Error missing HealthLakeDatastore with id ${id}` });
   }
   else {
     console.log("Found existing DynamoDB healthLake data store record", healthLakeDatastoreResult);
@@ -84,7 +87,7 @@ export const handler: Schema["importFHIR"]["functionHandler"] = async (event): P
   }
   catch (error: any) {
     console.error("Error starting import job:", error);
-    return JSON.stringify({ success: false, message: error.toString()});
+    return JSON.stringify({ success: false, message: error.toString() });
   }
   try {
     console.log("Waiting for healthLake import job to complete with jobId:", jobId);
@@ -92,11 +95,13 @@ export const handler: Schema["importFHIR"]["functionHandler"] = async (event): P
       throw new Error("jobId is undefined");
     }
 
-    const status = await waitFHIRImportJobComplete(healthLakeDatastore.datastore_id!, jobId, (status) => {
-      const importStatus = status === "COMPLETED" ? "IMPORT_COMPLETE" : "IMPORT_FAILED";
-            updateHealthLakeDatastoreStatus(id ?? undefined, importStatus,
-              `Waiting for HealthLake import job to complete: ${status}`);
-      
+    const status = await waitFHIRImportJobComplete(healthLakeDatastore.datastore_id!, jobId, async (status, i) => {
+
+      const importStatus = status === "FAILED" ? "IMPORT_FAILED" : status === "COMPLETED" ? "IMPORT_COMPLETED" : "IMPORT_IN_PROGRESS";
+      console.log("Setting dynamodb record status ", importStatus);
+      await updateHealthLakeDatastoreStatus(id ?? undefined, importStatus,
+        `Waiting for HealthLake import job to complete: ${status} (iteration ${i})`);
+
 
     });
     console.log("HealthLake import completed with status:", status);
@@ -105,7 +110,7 @@ export const handler: Schema["importFHIR"]["functionHandler"] = async (event): P
     console.error("Error waiting for import job to complete:", error);
     return JSON.stringify({ success: false, message: error.toString() });
   }
-  
+
   return JSON.stringify({ success: true, message: "Successfully completed FHIR import job", jobId });
 
 

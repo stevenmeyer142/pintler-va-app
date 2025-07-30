@@ -84,17 +84,20 @@ export const handler: Schema["createDataStore"]["functionHandler"] = async (even
       return JSON.stringify({ success: false, message: "dataStoreId is undefined" });
     }
 
-    const success = await waitDataStoreActive(dataStoreId, (status) => {
-       const newStatus = status = DatastoreStatus.CREATING ? "CREATING" : status = DatastoreStatus.ACTIVE ? "ACTIVE" : "CREATE_FAILED";
+    const success = await waitDataStoreActive(dataStoreId, async (status, i) => {
+      const newStatus = status === DatastoreStatus.CREATING ? "CREATING" : status === DatastoreStatus.ACTIVE ? "ACTIVE" : "CREATE_FAILED";
       console.log("Updating healthLake datastore status in DynamoDB to", newStatus);
-      client.models.HealthLakeDatastore.update({
-        id: id,
-        status: newStatus,
-        status_description: `Waiting HealthLake data store with name: ${name} to become active`,
+      await client.models.HealthLakeDatastore.update({
+      id: id,
+      status: newStatus,
+      status_description: `Waiting HealthLake data store creating with status ${status} with iteration ${i}`,
       }).then((result) => {
-        if (result.errors) {
-          console.error("Error updating healthLake datastore status", result.errors);
-        }
+      if (result.errors) {
+        console.error("Error updating healthLake datastore status", result.errors);
+      }
+      else {
+        console.log("HealthLake datastore status updated successfully");
+      }
       });
     });
 

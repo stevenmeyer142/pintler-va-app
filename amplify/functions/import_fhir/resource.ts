@@ -18,17 +18,17 @@ export class ImportFHIRConstruct extends Construct {
     const dataAccessPolicy = new iam.PolicyStatement({
       sid: "ImportFHIRDataAccess",
       actions: ["healthlake:*",
-              "s3:*",
-              "iam:*",
-              "ram:*",
-              "kms:*",
-            "logs:*",
-              "cloudwatch:*",
-            "glue:*"],
+        "s3:*",
+        "iam:*",
+        "ram:*",
+        "kms:*",
+        "logs:*",
+        "cloudwatch:*",
+        "glue:*"],
       resources: ["*"],
       effect: iam.Effect.ALLOW,
     })
-    
+
 
     const role = new iam.Role(this, 'VAHealthLakeImportDataAccessRole', {
       assumedBy: new iam.ServicePrincipal('healthlake.amazonaws.com'),
