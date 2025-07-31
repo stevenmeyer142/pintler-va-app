@@ -1,8 +1,17 @@
 import { HealthLakeClient, CreateFHIRDatastoreCommand, DatastoreStatus, DescribeFHIRDatastoreCommand} from "@aws-sdk/client-healthlake";
 
-
+/**
+ * Singleton instance of the AWS HealthLake client.
+ */
 export const healthLakeClientInstance = new HealthLakeClient();
 
+/**
+ * Creates a new AWS HealthLake FHIR data store with the specified name.
+ *
+ * @param dataStoreName - The name to assign to the new data store.
+ * @returns A promise that resolves to the response from the CreateFHIRDatastoreCommand.
+ * @throws Throws an error if the data store creation fails.
+ */
 export const createHealthLakeDataStore = async (dataStoreName: string) => {
     try {
         console.log("Creating HealthLake data store with name:", dataStoreName);
@@ -18,6 +27,16 @@ export const createHealthLakeDataStore = async (dataStoreName: string) => {
     }
 }
 
+/**
+ * Waits for the specified HealthLake data store to reach the ACTIVE status.
+ *
+ * Periodically checks the status of the data store and invokes the provided callback
+ * with the current status and iteration count after each check.
+ *
+ * @param dataStoreId - The unique identifier of the data store to monitor.
+ * @param callback - An async callback function invoked with the current status and iteration count.
+ * @returns A promise that resolves to true if the data store becomes ACTIVE, or false otherwise.
+ */
 export const waitDataStoreActive = async (
     dataStoreId: string,
     callback: (status: DatastoreStatus, i: number) => Promise<void>
@@ -44,6 +63,6 @@ export const waitDataStoreActive = async (
         return status == DatastoreStatus.ACTIVE; 
     } catch (error) {
         console.error("Error waiting for data store to become active:", error);
-        throw error; // Re-throw the error for the caller to handle
+        return false;
     }
 }

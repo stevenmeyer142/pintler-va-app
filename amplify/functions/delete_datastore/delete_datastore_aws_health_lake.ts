@@ -1,8 +1,14 @@
 import { HealthLakeClient, DeleteFHIRDatastoreCommand, DatastoreStatus, DescribeFHIRDatastoreCommand} from "@aws-sdk/client-healthlake";
 
-
 export const healthLakeClientInstance = new HealthLakeClient();
 
+/**
+ * Deletes a HealthLake FHIR data store with the specified ID.
+ *
+ * @param dataStoreId - The unique identifier of the HealthLake data store to delete.
+ * @returns A promise that resolves to the response from the DeleteFHIRDatastoreCommand.
+ * @throws Will throw an error if the deletion fails.
+ */
 export const deleteHealthLakeDataStore = async (dataStoreId: string) => {
     try {
         console.log("Deleting HealthLake data store with ID:", dataStoreId);
@@ -17,6 +23,13 @@ export const deleteHealthLakeDataStore = async (dataStoreId: string) => {
     }
 }
 
+/**
+ * Waits for a HealthLake FHIR data store to be deleted by polling its status.
+ *
+ * @param dataStoreId - The unique identifier of the HealthLake data store to monitor.
+ * @param callback - An asynchronous callback function invoked with the current status after each poll.
+ * @returns A promise that resolves to `true` if the data store is deleted, or `false` if an error occurs (other than a ReferenceError).
+ */
 export const waitDataStoreDeleted = async (dataStoreId: string, callback: (status: DatastoreStatus) => Promise<void>) : Promise<boolean> => {
     try {
         let status: DatastoreStatus = DatastoreStatus.DELETING; // Initial status

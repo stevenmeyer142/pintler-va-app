@@ -7,8 +7,6 @@ import outputs from "../../amplify_outputs.json";
 
 import { generateClient } from "aws-amplify/api"
 
-
-
 Amplify.configure(outputs);
 
 const client = generateClient<Schema>()
@@ -97,17 +95,6 @@ function importPatentRecord(healthRecordID: string | null) {
 }
 
 /**
-   * Creates a new HealthLake data store for the current patient, converts the patient's JSON file
-   * to NDJSON format, and imports the NDJSON data into HealthLake.
-   * 
-   * This function orchestrates the full workflow of provisioning a data store and importing
-   * patient data, intended to be called automatically when not in debug mode.
-   * 
-   * @async
-   * @returns {Promise<void>} A promise that resolves when all operations are complete.
-   */
-
-/**
  * Orchestrates the creation of a HealthLake data store.
  * 
  * @param patientId - The patient ICN.
@@ -190,6 +177,8 @@ export function CreateDataStorePage() {
         }
         else {
           console.log("DynamoDB data store record created successfully:", healthLakeDatastore);
+          // Add 2 seconds delay to allow the record to be created before proceeding
+          await new Promise(resolve => setTimeout(resolve, 2000));
           if (
             typeof patientId === "string" &&
             typeof s3_input === "string" &&
@@ -221,7 +210,6 @@ export function CreateDataStorePage() {
       console.error("Error creating HealthLakeDatastore record:", error);
     }
   }
-
 
   useEffect(() => {
     client.models.HealthLakeDatastore.observeQuery({
@@ -270,8 +258,7 @@ export function CreateDataStorePage() {
             style={{ marginBottom: "10px", display: "block" }}
             disabled={
               !CurrentDataStoreRecord || (
-              CurrentDataStoreRecord.status !== "ACTIVE" &&
-              CurrentDataStoreRecord.status !== "CREATING") // CREATING isa hack to work around a lambda timeout issue.
+              CurrentDataStoreRecord.status !== "ACTIVE") // CREATING isa hack to work around a lambda timeout issue.
             }
           >
             Import Patient Record

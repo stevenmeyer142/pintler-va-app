@@ -145,7 +145,7 @@ function App() {
 
     }, []);
 
-    const debugMode = true; // For testing purposes, set to true to enable debug mode
+    const debugMode = false; // For testing purposes, set to true to enable debug mode
 
     return (
       <div>
