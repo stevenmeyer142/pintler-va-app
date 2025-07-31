@@ -69,9 +69,9 @@ export const handler: Schema["deleteDatastore"]["functionHandler"] = async (even
 
     const result = await deleteHealthLakeDataStore(dataStoreId);
     console.log("HealthLake data store deletion initiated:", result);
-    const isDeleted = await waitDataStoreDeleted(dataStoreId, (status) => {
-      console.log("Updating healthLake datastore status in DynamoDB to CREATING");
-      client.models.HealthLakeDatastore.update({
+    const isDeleted = await waitDataStoreDeleted(dataStoreId, async (status) => {
+      console.log("Updating healthLake datastore status in DynamoDB to DELETING");
+      await client.models.HealthLakeDatastore.update({
         id: health_record_id,
         status: "DELETING",
         status_description: `Waiting HealthLake data store with name: ${name} to become delete`,
@@ -92,6 +92,7 @@ export const handler: Schema["deleteDatastore"]["functionHandler"] = async (even
       console.error("Error deleting DynamoDB record", errors);
       return JSON.stringify({ success: false, message: errors[0].message });
     }
+    console.log("DynamoDB record deleted successfully");
 
     return JSON.stringify({ success: true, message: `Data store successfully deleted` });
   } catch (error: any) {

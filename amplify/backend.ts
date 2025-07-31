@@ -42,10 +42,8 @@ importFHIRLambda.addToRolePolicy(healthLakeActionsPolicy);
 
 const deleteDataStorePolicy = new iam.PolicyStatement({
   sid: "DeleteDataStorePolicy",
-  actions: ["healthlake:DeleteFHIRDatastore",
-    "s3:DeleteObject",
-    "s3:ListBucket",
-    "Dynamodb:DeleteItem",
+  actions: [
+    "*",
   ],
   resources: ["*"],
   effect: iam.Effect.ALLOW,

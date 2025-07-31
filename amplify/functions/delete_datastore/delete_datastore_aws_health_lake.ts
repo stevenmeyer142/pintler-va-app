@@ -1,4 +1,4 @@
-import { HealthLakeClient, CreateFHIRDatastoreCommand, DatastoreStatus, DescribeFHIRDatastoreCommand} from "@aws-sdk/client-healthlake";
+import { HealthLakeClient, DeleteFHIRDatastoreCommand, DatastoreStatus, DescribeFHIRDatastoreCommand} from "@aws-sdk/client-healthlake";
 
 
 export const healthLakeClientInstance = new HealthLakeClient();
@@ -6,7 +6,7 @@ export const healthLakeClientInstance = new HealthLakeClient();
 export const deleteHealthLakeDataStore = async (dataStoreId: string) => {
     try {
         console.log("Deleting HealthLake data store with ID:", dataStoreId);
-        const response = await healthLakeClientInstance.send(new DescribeFHIRDatastoreCommand({
+        const response = await healthLakeClientInstance.send(new DeleteFHIRDatastoreCommand({
             DatastoreId: dataStoreId
         }));
         console.log("Delete data store response:", response);
@@ -17,7 +17,7 @@ export const deleteHealthLakeDataStore = async (dataStoreId: string) => {
     }
 }
 
-export const waitDataStoreDeleted = async (dataStoreId: string, callback: (status: DatastoreStatus) => void) : Promise<boolean> => {
+export const waitDataStoreDeleted = async (dataStoreId: string, callback: (status: DatastoreStatus) => Promise<void>) : Promise<boolean> => {
     try {
         let status: DatastoreStatus = DatastoreStatus.DELETING; // Initial status
         while (status === DatastoreStatus.DELETING) {
@@ -26,16 +26,16 @@ export const waitDataStoreDeleted = async (dataStoreId: string, callback: (statu
             }));
             status = response.DatastoreProperties?.DatastoreStatus ?? DatastoreStatus.DELETED; // Get the current status
             console.log("Data store status:", status);      
-            // Invoke the callback with the current status if provided
-            callback(status);   
+            // Invoke the async callback with the current status if provided
+            await callback(status);   
             if (status !== DatastoreStatus.DELETING) {
                 break;
             }
             await new Promise(resolve => setTimeout(resolve, 5000)); // Wait for 5 seconds before checking again
         }
         return status == DatastoreStatus.DELETED;
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error waiting for data store to be deleted:", error);
-        throw error; // Re-throw the error for the caller to handle
+        return error.name == "ReferenceError"; // return false if the error is not related to the datastore not being found
     }
 }

@@ -114,11 +114,7 @@ function App() {
 
   function DisplayPatient() {
     const [HealthLakeDatastoresArray, setHealthLakeDatastoresArray] = useState<Array<Schema["HealthLakeDatastore"]["type"]>>([]);
-    const [CurrentDataStoreRecord, setCurrentDataStoreRecord] = useState<Schema["HealthLakeDatastore"]["type"] | undefined>(undefined);
-
-    var patientId = "Not provided";
-    
-
+    const [CurrentDataStoreRecordIndex, setCurrentDataStoreRecordIndex] = useState<number>(-1);
     var status = "Not provided";
 
     /**
@@ -130,36 +126,16 @@ function App() {
     async function setCurrentDatastoreRecordIndex(index: number) {
       console.log("Setting current datastore record index to:", index);
       if (index >= 0 && index < HealthLakeDatastoresArray.length) {
-        const currentRecord = HealthLakeDatastoresArray[index];
-        console.log("Current datastore record:", currentRecord);
-        setCurrentDataStoreRecord(currentRecord);
-        patientId = currentRecord.patient_icn || "Not provided";
+        if (index != CurrentDataStoreRecordIndex) {
+          setCurrentDataStoreRecordIndex(index);
+        }
 
       } else {
         console.log("Index out of bounds for HealthLakeDatastoresArray");
-        setCurrentDataStoreRecord(undefined);
-        patientId = "Not provided";
+        if (CurrentDataStoreRecordIndex !== -1) {
+          setCurrentDataStoreRecordIndex(-1);
+         }
       }
-
-
-      if (HealthLakeDatastoresArray.length > 0) {
-        if (CurrentDataStoreRecord === undefined) {
-          setCurrentDatastoreRecordIndex(0);
-        }
-        else {
-          var recordIndex = HealthLakeDatastoresArray.findIndex(record => record.id === CurrentDataStoreRecord?.id);
-          if (recordIndex === -1) {
-            setCurrentDatastoreRecordIndex(0);
-          }
-          else {
-            setCurrentDatastoreRecordIndex(recordIndex);
-          }
-        }
-      }
-      else {
-        setCurrentDataStoreRecord(undefined);
-      }
-
     }
 
     useEffect(() => {
@@ -175,27 +151,25 @@ function App() {
       <div>
         <div>
           <h1>Patient Details</h1>
-          <p><strong>Status:</strong> {CurrentDataStoreRecord && CurrentDataStoreRecord.status ? CurrentDataStoreRecord.status : status}</p>
-          <p><strong>Status message:</strong> {CurrentDataStoreRecord && CurrentDataStoreRecord.status_description ? CurrentDataStoreRecord.status_description : ''}</p>
-          <p><strong>Patient ICN:</strong> {CurrentDataStoreRecord && CurrentDataStoreRecord.patient_icn ? CurrentDataStoreRecord.patient_icn : ''}</p>
-          <p><strong>Patient S3 Object URL:</strong> {CurrentDataStoreRecord && CurrentDataStoreRecord.s3_input ? CurrentDataStoreRecord.s3_input : ""}</p>
-         <p>{<button onClick={() => console.log("Deleting data store.")}>Delete Data Store</button>}</p>
+          <p><strong>Status:</strong> {CurrentDataStoreRecordIndex != -1 && HealthLakeDatastoresArray.length > CurrentDataStoreRecordIndex && HealthLakeDatastoresArray[CurrentDataStoreRecordIndex].status ? HealthLakeDatastoresArray[CurrentDataStoreRecordIndex].status : status}</p>
+          <p><strong>Status message:</strong> {CurrentDataStoreRecordIndex != -1 && HealthLakeDatastoresArray.length > CurrentDataStoreRecordIndex && HealthLakeDatastoresArray[CurrentDataStoreRecordIndex].status_description ? HealthLakeDatastoresArray[CurrentDataStoreRecordIndex].status_description : ''}</p>
+          <p><strong>Patient ICN:</strong> {CurrentDataStoreRecordIndex != -1 && HealthLakeDatastoresArray.length > CurrentDataStoreRecordIndex && HealthLakeDatastoresArray[CurrentDataStoreRecordIndex].patient_icn ? HealthLakeDatastoresArray[CurrentDataStoreRecordIndex].patient_icn : ''}</p>
+          <p><strong>Patient S3 Object URL:</strong> {CurrentDataStoreRecordIndex != -1 && HealthLakeDatastoresArray.length > CurrentDataStoreRecordIndex && HealthLakeDatastoresArray[CurrentDataStoreRecordIndex].s3_input ? HealthLakeDatastoresArray[CurrentDataStoreRecordIndex].s3_input : ""}</p>
           <p>{<button onClick={() => goToVA()}>Import VA Patient To Healthlake</button>}</p>
-          <p>{debugMode && (
-            <button onClick={() => debugCreateDataStore()}>Debug Create Data Store</button>
-          )}</p>
-           
+          <p>{CurrentDataStoreRecordIndex >= 0 && HealthLakeDatastoresArray.length > CurrentDataStoreRecordIndex && (<button onClick={() => deleteDataStore(HealthLakeDatastoresArray[CurrentDataStoreRecordIndex].id)}>Delete Data Store</button>)}</p>
         </div>
         <div>
           <ul>
             {HealthLakeDatastoresArray.map((HealthLakeDatastore, index) => (
-
               <li
                 onClick={() => HealthLakeDatastore.id && setCurrentDatastoreRecordIndex(index)}
                 key={HealthLakeDatastore.id}>{HealthLakeDatastore.s3_input} {HealthLakeDatastore.status}</li>
             ))}
           </ul>
         </div>
+        <p>{debugMode && (
+          <button onClick={() => debugCreateDataStore()}>Debug Create Data Store</button>
+        )}</p>
         <div style={{ margin: "10px 0" }}></div>
         <button onClick={signOut}>Sign out</button>
       </div>
