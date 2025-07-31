@@ -91,7 +91,6 @@ export class VAAccessConstruct extends Construct {
 
 
     vetAccessLambda.addEnvironment('GATEWAY_URL', httpApi.url?.toString() ?? '');
- //   vetAccessLambda.addEnvironment('DEBUG', "express:*");
      this.gateway_url = httpApi.url?.toString() ?? '';
 
      this.kms_key = new Key(this, 'VAAccessKMSKey');

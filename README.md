@@ -27,7 +27,7 @@ The redirect url takes the form `${gatewayURL}auth/cb`
 
 The client_id and client_secret for VA Access are stored in the AWS Secrets Manager. These must be entered after requesting accessing.
 
-The host prefix is used to designate a unique secret name as shown in the following example.
+The App ID of the API Gateway host prefix is used to designate a unique secret name as shown in the following example. This Gateway is used by the AWS Lambda function defined in "amplify/custom/va-access". It is the Gateway for the JS Express server.
 
 Gateway url - https://czy03iz038.execute-api.us-east-1.amazonaws.com/
 

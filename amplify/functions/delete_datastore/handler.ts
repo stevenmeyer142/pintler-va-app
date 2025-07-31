@@ -10,8 +10,21 @@ Amplify.configure(outputs);
 
 const client = generateClient<Schema>();
 
-
-
+/**
+ * AWS Lambda handler to delete a HealthLake data store and its associated S3 bucket and DynamoDB record.
+ *
+ * This function performs the following steps:
+ * 1. Validates the input event to ensure a `health_record_id` is provided.
+ * 2. Retrieves the HealthLakeDatastore record from DynamoDB using the provided `health_record_id`.
+ * 3. Extracts the S3 bucket name from the `s3_input` URL in the record and deletes the bucket and its objects.
+ * 4. Initiates deletion of the HealthLake data store using the AWS HealthLake API.
+ * 5. Waits for the HealthLake data store to be deleted, updating the record status to "DELETING" during the process.
+ * 6. Deletes the corresponding DynamoDB record upon successful deletion of the HealthLake data store.
+ * 7. Handles and logs errors at each step, returning a JSON string with the result.
+ *
+ * @param event - The Lambda event object containing the `health_record_id` in `event.arguments`.
+ * @returns A JSON string indicating success or failure, and a message describing the result.
+ */
 export const handler: Schema["deleteDatastore"]["functionHandler"] = async (event: any) => {
 
   const { health_record_id } = event.arguments

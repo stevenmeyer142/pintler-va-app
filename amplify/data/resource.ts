@@ -4,8 +4,6 @@ import { deleteDatastore } from "../functions/delete_datastore/resource"
 import { createDataStore } from "../functions/create_data_store/resource";
 import {s3JsonToNdjson} from "../functions/s3_json_to_ndjson/resource";
 
-
-
 const schema = a
   .schema({
 

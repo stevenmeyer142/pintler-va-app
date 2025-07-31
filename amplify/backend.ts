@@ -34,23 +34,28 @@ const healthLakeActionsPolicy = new iam.PolicyStatement({
   effect: iam.Effect.ALLOW,
 })
 
-
 createDataStoreLambda.addToRolePolicy(healthLakeActionsPolicy);
-
-
 importFHIRLambda.addToRolePolicy(healthLakeActionsPolicy);
 
 const deleteDataStorePolicy = new iam.PolicyStatement({
   sid: "DeleteDataStorePolicy",
   actions: [
-    "*",
+    "s3:DeleteObject",
+    "s3:DeleteBucket",
+    "s3:ListBucket",
+    "kms:Decrypt",
+    "cloudwatch:CreateLogGroup",
+    "cloudwatch:CreateLogStream",
+    "healthlake:DeleteFHIRDatastore",
+    "healthlake:DescribeFHIRDatastore",
+    "glue:*"
   ],
   resources: ["*"],
   effect: iam.Effect.ALLOW,
 })
+
 const deleteDataStoreLambda = backend.deleteDatastore.resources.lambda;
 deleteDataStoreLambda.addToRolePolicy(deleteDataStorePolicy);
-
 
 const vaAccessConstruct = new VAAccessConstruct(
   backend.createStack('VAAccessConstruct'),

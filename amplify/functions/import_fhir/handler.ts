@@ -1,5 +1,4 @@
 import type { Schema, HealthLakeDatastoreRecord, FunctionResponse } from '../../data/resource';
-
 import { Amplify } from 'aws-amplify';
 import { generateClient } from 'aws-amplify/data';
 import outputs from "../../../amplify_outputs.json"
@@ -9,6 +8,19 @@ Amplify.configure(outputs);
 
 const client = generateClient<Schema>();
 
+/**
+ * AWS Lambda handler for importing FHIR data into an AWS HealthLake datastore.
+ *
+ * This function performs the following steps:
+ * 1. Validates the input event and retrieves the HealthLake datastore record from DynamoDB.
+ * 2. Starts a FHIR import job in AWS HealthLake using the provided datastore and S3 input/output locations.
+ * 3. Updates the status of the HealthLake datastore record to reflect the import job's progress.
+ * 4. Waits for the import job to complete, updating the status in DynamoDB on each iteration.
+ * 5. Returns a JSON string indicating the success or failure of the import operation, including the job ID if successful.
+ *
+ * @param event - The Lambda event containing the arguments for the import operation, including the HealthLake datastore ID.
+ * @returns A promise that resolves to a JSON string indicating the result of the import operation.
+*/
 async function updateHealthLakeDatastoreStatus(id: string | undefined, status: string, description: string): Promise<FunctionResponse> {
   if (!id) {
     console.error("id is required to update healthLake datastore status");

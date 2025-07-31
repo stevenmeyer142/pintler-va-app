@@ -9,6 +9,20 @@ Amplify.configure(outputs);
 
 const client = generateClient<Schema>();
 
+/**
+ * AWS Lambda handler for creating and managing a HealthLake data store.
+ *
+ * This function performs the following steps:
+ * 1. Validates required input arguments (`id`, `name`, `s3_input`, `patient_icn`).
+ * 2. Retrieves the existing HealthLakeDatastore record from DynamoDB.
+ * 3. Creates a new AWS HealthLake data store using the provided name.
+ * 4. Updates the DynamoDB HealthLakeDatastore record with the new data store ID and status.
+ * 5. Waits for the HealthLake data store to become active, updating status in DynamoDB during the process.
+ * 6. Returns a JSON string indicating success or failure, and the new data store ID if successful.
+ *
+ * @param event - The event object containing arguments for data store creation.
+ * @returns A promise that resolves to a JSON string with the result of the operation.
+*/
 export const handler: Schema["createDataStore"]["functionHandler"] = async (event): Promise<string> => {
   const { id, name, s3_input, patient_icn } = event.arguments
   console.log("Calling CreateDataStore with arguments:", event.arguments);

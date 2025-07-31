@@ -2,6 +2,17 @@ import { S3Client, DeleteObjectCommand, DeleteBucketCommand, ListObjectsCommand,
 
 const client = new S3Client({});
 
+/**
+ * Deletes all objects within the specified S3 bucket and then deletes the bucket itself.
+ *
+ * This function performs the following steps:
+ * 1. Lists all objects in the given S3 bucket.
+ * 2. Deletes each object found in the bucket, waiting for each deletion to complete.
+ * 3. Deletes the bucket after all objects have been removed.
+ *
+ * @param bucketName - The name of the S3 bucket to delete along with its contents.
+ * @throws Will throw an error if any operation (listing, deleting objects, or deleting the bucket) fails.
+ */
 export async function deleteBucketAndObjects(bucketName: string): Promise<void> {
     try {
         // List all objects in the bucket

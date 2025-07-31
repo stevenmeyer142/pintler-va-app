@@ -7,7 +7,16 @@ import type { FunctionResponse } from "../../amplify/data/resource";
 Amplify.configure(outputs);
 const client = generateClient<Schema>()
 
-
+/**
+ * Updates the status and description of a HealthLake datastore record in DynamoDB.
+ *
+ * @param id - The unique identifier of the HealthLake datastore. Must be defined.
+ * @param status - The new status to set for the datastore.
+ * @param description - A description of the status update.
+ * @param extraKeys - Optional array of additional field names to update.
+ * @param extraValues - Optional array of values corresponding to `extraKeys`.
+ * @returns A promise resolving to a `FunctionResponse` indicating success or failure.
+ */
 export async function updateHealthLakeDatastoreStatus(id: string | undefined, status: string, description: string, extraKeys: string[] = [], extraValues: string[] = []): Promise<FunctionResponse> {
     if (!id) {
         console.error("id is required to update healthLake datastore status");
@@ -35,7 +44,12 @@ export async function updateHealthLakeDatastoreStatus(id: string | undefined, st
     return { success: true, message: "" };
 }
 
-
+/**
+ * Parses a JSON string and validates that it matches the `FunctionResponse` structure.
+ *
+ * @param jsonString - The JSON string or object to parse and validate.
+ * @returns The parsed object if it matches the `FunctionResponse` structure, or an error object if parsing fails or the structure is invalid.
+ */
 export function parseFunctionResultJson(jsonString: any): any {
   try {
     const parsed = JSON.parse(jsonString);

@@ -7,12 +7,16 @@ import outputs from "../../amplify_outputs.json";
 
 import { generateClient } from "aws-amplify/api"
 
-
-
 Amplify.configure(outputs);
 
 const client = generateClient<Schema>()
 
+/**
+ * Imports a FHIR health record into the HealthLake DataStore using the provided health record ID.
+ * 
+ * @param healthRecordID - The DynamoDB health record ID to import.
+ * @returns A promise that resolves to `true` if the import was successful, otherwise `false`.
+ */
 async function importToDataStore(healthRecordID: string): Promise<boolean> {
   console.log("Importing to DataStore using DynamoDB health record ID:", healthRecordID);
 
@@ -36,12 +40,25 @@ async function importToDataStore(healthRecordID: string): Promise<boolean> {
   }
 }
 
-
+/**
+ * Redirects the user to the Patients Page by setting the window location.
+ */
 function ReturnToPatientsPage() {
   console.log("Returning to Patients Page");
   window.location.href = "/";
 }
 
+/**
+ * React component for importing a patient's health record into the HealthLake DataStore.
+ * 
+ * - Retrieves the health record ID from the URL search parameters.
+ * - Observes the HealthLakeDatastore model for the current record.
+ * - Displays patient and record details.
+ * - Allows importing the patient record if the record status is "ACTIVE" or "CREATING".
+ * - Provides a button to return to the Patients Page.
+ * 
+ * @component
+ */
 export function ImportToDataStorePage() {
   const [CurrentDataStoreRecord, setCurrentDataStoreRecord] = useState<Schema["HealthLakeDatastore"]["type"] | undefined>(undefined);
   const [searchParams] = useSearchParams();
